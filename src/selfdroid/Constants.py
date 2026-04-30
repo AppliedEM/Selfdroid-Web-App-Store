@@ -49,7 +49,7 @@ class Constants:
     FLASH_CATEGORY_FORM_ERROR: str = "form_error"
 
     TALISMAN_OPTIONS: Dict[str, Any] = {
-        "force_https": True,
+        "force_https": False,
         "strict_transport_security": False,  # HSTS should be set on the internet-facing web server, if needed.
         "frame_options": "DENY",
         "referrer_policy": "same-origin",

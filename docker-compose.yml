@@ -1,0 +1,74 @@
+services:
+  # Monero full node (pruned, for blockchain data)
+  # monerod:
+  #   image: ghcr.io/sethforprivacy/simple-monerod:latest
+  #   container_name: selfdroid-monerod
+  #   restart: unless-stopped
+  #   command:
+  #     - --prune-blockchain
+  #     - --rpc-bind-ip=0.0.0.0
+  #     - --rpc-bind-port=18081
+  #     - --restricted-rpc
+  #     - --public-node
+  #     - --bootstrap-daemon-address=node.moneroworld.com:18089
+  #     - --confirm-external-bind
+  #     - --log-level=1
+  #   volumes:
+  #     - monero_data:/home/monero/.bitmonero
+  #   networks:
+  #     - selfdroid
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:18081/json_rpc", "-d", '{"jsonrpc":"2.0","id":"0","method":"get_info"}', "-H", "Content-Type: application/json"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  #     start_period: 300s
+
+  # Monero Wallet RPC (view-only, handles payment detection)
+  wallet-rpc:
+    image: ghcr.io/sethforprivacy/simple-monero-wallet-rpc:latest
+    container_name: selfdroid-wallet-rpc
+    network_mode: host
+    restart: unless-stopped
+    command:
+      - --daemon-address=http://127.0.0.1:18081
+      - --trusted-daemon
+      - --rpc-bind-port=18088
+      - --disable-rpc-login
+      - --wallet-file=/wallet/wallet_viewonly
+      - --password=apples123
+      - --no-initial-sync
+    volumes:
+      - ./wallet_data:/wallet
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:18088/json_rpc", "-d", '{"jsonrpc":"2.0","id":"0","method":"get_version"}', "-H", "Content-Type: application/json"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Selfdroid Flask web app
+  flask:
+    build:
+      context: ./src
+      dockerfile: ../Dockerfile
+    container_name: selfdroid-flask
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    volumes:
+      - app_data:/app/app_data
+      - ./wallet_data:/app/wallet_data
+    environment:
+      - MONERO_WALLET_RPC_URL=http://localhost:18088/json_rpc
+    depends_on:
+      - wallet-rpc
+    networks:
+      - selfdroid
+
+volumes:
+  app_data:
+
+networks:
+  selfdroid:
+    driver: bridge

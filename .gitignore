@@ -3,3 +3,9 @@ virtualenv
 self_signed_certs
 app_data
 TODO.txt
+
+# Monero payment
+.env
+wallet_data/
+*.keys
+*.wallet

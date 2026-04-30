@@ -55,7 +55,13 @@ class Settings:
         """
 
         # The password hash can be fetched e.g. from environment variables, database, properly protected file, ...
-        raise NotImplementedError("The user password hasn't been set!")
+        # For development, use a default hash if no password is configured.
+        # To set your own password, generate a hash with: python -c "import bcrypt; print(bcrypt.hashpw(b'yourpassword', bcrypt.gensalt()).decode())"
+        import os
+        env_hash = os.environ.get("SELFDROID_USER_PASSWORD_HASH")
+        if env_hash:
+            return env_hash
+        return None  # Passwordless user login for dev
 
     @staticmethod
     def get_admin_password_hash() -> str:
@@ -64,4 +70,10 @@ class Settings:
         """
 
         # The password hash can be fetched e.g. from environment variables, a database, a properly protected file, ...
-        raise NotImplementedError("The administrator password hasn't been set!")
+        import os
+        env_hash = os.environ.get("SELFDROID_ADMIN_PASSWORD_HASH")
+        if env_hash:
+            return env_hash
+        # Default dev password: admin123
+        import bcrypt
+        return bcrypt.hashpw(b"admin123", bcrypt.gensalt()).decode()

@@ -1,0 +1,9 @@
+# Selfdroid Monero Payment Dependencies
+# Install alongside existing src/requirements.txt
+
+# HTTP requests for wallet-rpc RPC calls and CoinGecko API
+requests>=2.28.0
+
+# QR code generation for payment invoices
+qrcode>=7.3.1
+Pillow>=8.3.1

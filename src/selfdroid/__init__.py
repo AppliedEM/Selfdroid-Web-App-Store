@@ -38,7 +38,7 @@ app.secret_key = initializer.get_secret_key()
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SQLALCHEMY_DATABASE_URI"] = Constants.DATABASE_URI
 app.config["MAX_CONTENT_LENGTH"] = Settings.MAX_UPLOAD_SIZE
-app.config["SESSION_COOKIE_SECURE"] = True
+app.config["SESSION_COOKIE_SECURE"] = False
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = True
 
@@ -52,8 +52,11 @@ db.session.commit()
 
 from selfdroid.api import api_blueprint
 from selfdroid.web import web_blueprint
+from selfdroid.payments import init_payments
+
 app.register_blueprint(api_blueprint)
 app.register_blueprint(web_blueprint)
+init_payments(app)
 
 
 talisman = flask_talisman.Talisman(app, **Constants.TALISMAN_OPTIONS)

@@ -1,0 +1,45 @@
+{% extends "_web_base.html" %}
+
+{% block block_content %}
+<div class="container mt-4">
+    <h2>Monero (XMR) Payment</h2>
+    <p class="text-muted">Pay for your order using Monero. A unique payment address will be generated for this transaction.</p>
+
+    {% if error %}
+    <div class="alert alert-danger">{{ error }}</div>
+    {% endif %}
+
+    <form method="POST" class="mt-3">
+        <div class="mb-3">
+            <label for="order_id" class="form-label">Order ID</label>
+            <input type="text" class="form-control" id="order_id" name="order_id" required
+                   placeholder="e.g., APP-12345">
+        </div>
+
+        <div class="mb-3">
+            <label for="amount_fiat" class="form-label">Amount (USD)</label>
+            <input type="number" class="form-control" id="amount_fiat" name="amount_fiat" required
+                   step="0.01" min="0.01" placeholder="0.00">
+        </div>
+
+        <div class="mb-3">
+            <label for="currency" class="form-label">Currency</label>
+            <select class="form-select" id="currency" name="currency">
+                <option value="usd" selected>USD ($)</option>
+            </select>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Generate Payment</button>
+    </form>
+
+    <div class="mt-4">
+        <h5>How to pay with Monero</h5>
+        <ol>
+            <li>Scan the QR code with your Monero wallet (Cake, Monerujo, etc.)</li>
+            <li>Or copy the address and send the exact XMR amount</li>
+            <li>Payment is confirmed automatically after 2 blockchain confirmations</li>
+            <li>Your order will be processed once payment is confirmed</li>
+        </ol>
+    </div>
+</div>
+{% endblock %}
