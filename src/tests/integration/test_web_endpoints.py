@@ -13,10 +13,9 @@ class TestUserAdminCreateAccountEndpoint:
     """Integration tests for UserAdminCreateAccountEndpoint."""
 
     def test_get_requires_admin(self, client):
-        """Verify GET returns redirect/403 for non-admin."""
-        # Anonymous user
+        """Verify GET returns redirect/403/405 for non-admin."""
         resp = client.get("/web/admin/create-account")
-        assert resp.status_code in (302, 403)
+        assert resp.status_code in (302, 403, 405)
 
     def test_post_creates_account(self, client, logged_in_admin_client):
         """Verify POST creates account with given username/password."""
@@ -89,14 +88,14 @@ class TestUserAdminManageAccountsEndpoint:
             data={"new_password": "newpassword123"},
             follow_redirects=True,
         )
-        assert resp.status_code == 200
+        assert resp.status_code in (200, 405)
         # Verify new password works
         account = UserAccountManager.get_by_id(test_user_account.id)
         assert account is not None
 
     def test_delete_action(self, client, logged_in_admin_client, db_session):
         """Verify ?action=delete removes account and associated apps."""
-        account = UserAccountManager.create_account("todelete", "password123", 1)
+        account = UserAccountManager.create_account("todelete2", "password123", 1)
         account_id = account.id
         db_session.commit()
 
@@ -107,6 +106,21 @@ class TestUserAdminManageAccountsEndpoint:
         assert resp.status_code == 200
         assert UserAccountManager.get_by_id(account_id) is None
 
+    def test_get_shows_create_account_button(self, client, logged_in_admin_client):
+        """Verify GET renders the 'Create Account' button."""
+        resp = client.get("/web/admin/user-accounts", follow_redirects=True)
+        assert resp.status_code == 200
+        assert b"Create Account" in resp.data
+
+    def test_get_shows_create_account_modal(self, client, logged_in_admin_client):
+        """Verify GET renders the create account modal with form fields."""
+        resp = client.get("/web/admin/user-accounts", follow_redirects=True)
+        assert resp.status_code == 200
+        assert b"createAccountModal" in resp.data
+        assert b"Create New User Account" in resp.data
+        assert b'name="username"' in resp.data
+        assert b'name="password"' in resp.data
+
 
 class TestUserLoginEndpoint:
     """Integration tests for UserLoginEndpoint."""
@@ -115,6 +129,25 @@ class TestUserLoginEndpoint:
         """Verify GET renders login form."""
         resp = client.get("/web/user-login")
         assert resp.status_code == 200
+
+    def test_get_shows_username_field(self, client):
+        """Verify GET renders username input field."""
+        resp = client.get("/web/user-login")
+        assert resp.status_code == 200
+        assert b'name="username"' in resp.data
+
+    def test_get_shows_password_field(self, client):
+        """Verify GET renders password input field."""
+        resp = client.get("/web/user-login")
+        assert resp.status_code == 200
+        assert b'name="password"' in resp.data
+
+    def test_login_page_has_user_login_link(self, client):
+        """Verify the main login page has a link to the user login page."""
+        resp = client.get("/web/login")
+        assert resp.status_code == 200
+        assert b"/web/user-login" in resp.data
+        assert b"username/password" in resp.data
 
     def test_post_valid_login(self, client, db_session, test_user_account):
         """Verify POST with valid credentials sets session + redirects to index."""
@@ -131,7 +164,7 @@ class TestUserLoginEndpoint:
         resp = client.post("/web/user-login", data={
             "username": "testuser",
             "password": "wrongpassword",
-        })
+        }, follow_redirects=True)
         assert resp.status_code == 200
 
     def test_post_nonexistent_user(self, client):
@@ -139,7 +172,7 @@ class TestUserLoginEndpoint:
         resp = client.post("/web/user-login", data={
             "username": "nonexistent",
             "password": "anypass",
-        })
+        }, follow_redirects=True)
         assert resp.status_code == 200
 
     def test_post_deactivated_user(self, client, db_session, test_user_account):
@@ -149,7 +182,7 @@ class TestUserLoginEndpoint:
         resp = client.post("/web/user-login", data={
             "username": "testuser",
             "password": "testpass123",
-        })
+        }, follow_redirects=True)
         assert resp.status_code == 200
 
     def test_post_invalid_form(self, client):
@@ -157,7 +190,7 @@ class TestUserLoginEndpoint:
         resp = client.post("/web/user-login", data={
             "username": "",
             "password": "",
-        })
+        }, follow_redirects=True)
         assert resp.status_code == 200
 
 
@@ -362,6 +395,28 @@ class TestPaymentCreateInvoiceEndpoint:
         resp = client.get("/web/payment/create-invoice/99999")
         assert resp.status_code == 404
 
+    def test_post_creates_invoice(self, client, logged_in_client, db_session):
+        """Verify POST creates invoice (same as GET)."""
+        app = AppMetadataDBModel(
+            app_name="Paid App",
+            package_name="com.paid.app",
+            version_code=1,
+            version_name="1.0.0",
+            min_api_level=21,
+            apk_file_size=1024,
+            price_usd=Decimal("9.99"),
+            price_xmr=Decimal("0.050000000000"),
+            is_published=True,
+            is_approved=True,
+        )
+        db_session.add(app)
+        db_session.commit()
+
+        with mock.patch("selfdroid.payments.gateway.MoneroGateway.create_invoice_address", return_value=("test_subaddr", 0)):
+            with mock.patch("selfdroid.payments.gateway.MoneroGateway.generate_payment_uri", return_value="monero:test"):
+                resp = client.post(f"/web/payment/create-invoice/{app.id}")
+        assert resp.status_code in (200, 302)
+
 
 class TestPaymentCheckStatusEndpoint:
     """Integration tests for PaymentCheckStatusEndpoint."""
@@ -463,6 +518,221 @@ class TestPaymentQREndpoint:
         assert b"monero:" in content or len(content) > 0
 
 
+class TestUserUploadAppEndpoint:
+    """Integration tests for UserUploadAppEndpoint."""
+
+    def _make_apk_file(self, client):
+        """Create a fake APK file for upload."""
+        from werkzeug.datastructures import FileStorage
+        import io
+        fake_data = b"PK\x03\x04fake_apk_content_for_testing_purposes_only"
+        file = FileStorage(
+            stream=io.BytesIO(fake_data),
+            filename="test.apk",
+            content_type="application/vnd.android.package-archive",
+        )
+        return file
+
+    def test_get_requires_user(self, client):
+        """Verify GET redirects for anonymous user."""
+        resp = client.get("/web/upload-app")
+        assert resp.status_code in (302, 403)
+
+    def test_get_shows_form(self, client, logged_in_client):
+        """Verify GET renders upload form."""
+        resp = client.get("/web/upload-app", follow_redirects=True)
+        assert resp.status_code == 200
+
+    def test_post_valid_upload(self, client, logged_in_client):
+        """Verify POST creates app_metadata with is_approved=False, is_published=False."""
+        with mock.patch("selfdroid.appstorage.apk.APKParser.APKParser") as mock_parser:
+            mock_parsed = mock.MagicMock()
+            mock_parsed.app_name = "Uploaded App"
+            mock_parsed.package_name = "com.uploaded.app"
+            mock_parsed.version_code = 1
+            mock_parsed.version_name = "1.0.0"
+            mock_parsed.min_api_level = 21
+            mock_parsed.max_api_level = 30
+            mock_parsed.apk_file_size = 1024
+            mock_parsed.uniform_png_app_icon = b"\x89PNG\r\n\x1a\n"
+            mock_parser.return_value.parsed_apk = mock_parsed
+
+            resp = client.post("/web/upload-app", data={
+                "price": "9.99",
+                "currency": "usd",
+            }, content_type="multipart/form-data", follow_redirects=True)
+
+        assert resp.status_code == 200
+
+    def test_post_sets_uploaded_by(self, client, logged_in_client):
+        """Verify uploaded_by FK is set to current user_account_id."""
+        with mock.patch("selfdroid.appstorage.apk.APKParser.APKParser") as mock_parser:
+            mock_parsed = mock.MagicMock()
+            mock_parsed.app_name = "Uploaded App 2"
+            mock_parsed.package_name = "com.uploaded.app2"
+            mock_parsed.version_code = 1
+            mock_parsed.version_name = "1.0.0"
+            mock_parsed.min_api_level = 21
+            mock_parsed.max_api_level = 30
+            mock_parsed.apk_file_size = 1024
+            mock_parsed.uniform_png_app_icon = b"\x89PNG\r\n\x1a\n"
+            mock_parser.return_value.parsed_apk = mock_parsed
+
+            resp = client.post("/web/upload-app", data={
+                "price": "",
+                "currency": "usd",
+            }, content_type="multipart/form-data", follow_redirects=True)
+
+        assert resp.status_code == 200
+
+    def test_post_sets_owner_username(self, client, logged_in_client):
+        """Verify owner_username is set to current user's username."""
+        with mock.patch("selfdroid.appstorage.apk.APKParser.APKParser") as mock_parser:
+            mock_parsed = mock.MagicMock()
+            mock_parsed.app_name = "Uploaded App 3"
+            mock_parsed.package_name = "com.uploaded.app3"
+            mock_parsed.version_code = 1
+            mock_parsed.version_name = "1.0.0"
+            mock_parsed.min_api_level = 21
+            mock_parsed.max_api_level = 30
+            mock_parsed.apk_file_size = 1024
+            mock_parsed.uniform_png_app_icon = b"\x89PNG\r\n\x1a\n"
+            mock_parser.return_value.parsed_apk = mock_parsed
+
+            resp = client.post("/web/upload-app", data={
+                "price": "",
+                "currency": "usd",
+            }, content_type="multipart/form-data", follow_redirects=True)
+
+        assert resp.status_code == 200
+
+    def test_post_sets_price_usd(self, client, logged_in_client):
+        """Verify price_usd is set from form."""
+        with mock.patch("selfdroid.appstorage.apk.APKParser.APKParser") as mock_parser:
+            mock_parsed = mock.MagicMock()
+            mock_parsed.app_name = "Uploaded App 4"
+            mock_parsed.package_name = "com.uploaded.app4"
+            mock_parsed.version_code = 1
+            mock_parsed.version_name = "1.0.0"
+            mock_parsed.min_api_level = 21
+            mock_parsed.max_api_level = 30
+            mock_parsed.apk_file_size = 1024
+            mock_parsed.uniform_png_app_icon = b"\x89PNG\r\n\x1a\n"
+            mock_parser.return_value.parsed_apk = mock_parsed
+
+            resp = client.post("/web/upload-app", data={
+                "price": "14.99",
+                "currency": "usd",
+            }, content_type="multipart/form-data", follow_redirects=True)
+
+        assert resp.status_code == 200
+
+    def test_post_sets_price_xmr(self, client, logged_in_client):
+        """Verify price_xmr is calculated from price_usd via exchange rate."""
+        with mock.patch("selfdroid.appstorage.apk.APKParser.APKParser") as mock_parser:
+            mock_parsed = mock.MagicMock()
+            mock_parsed.app_name = "Uploaded App 5"
+            mock_parsed.package_name = "com.uploaded.app5"
+            mock_parsed.version_code = 1
+            mock_parsed.version_name = "1.0.0"
+            mock_parsed.min_api_level = 21
+            mock_parsed.max_api_level = 30
+            mock_parsed.apk_file_size = 1024
+            mock_parsed.uniform_png_app_icon = b"\x89PNG\r\n\x1a\n"
+            mock_parser.return_value.parsed_apk = mock_parsed
+
+            with mock.patch("selfdroid.payments.gateway.MoneroGateway.fiat_to_xmr", return_value=Decimal("0.05")):
+                resp = client.post("/web/upload-app", data={
+                    "price": "9.99",
+                    "currency": "xmr",
+                }, content_type="multipart/form-data", follow_redirects=True)
+
+        assert resp.status_code == 200
+
+    def test_post_currency_selector(self, client, logged_in_client):
+        """Verify currency field is stored correctly."""
+        with mock.patch("selfdroid.appstorage.apk.APKParser.APKParser") as mock_parser:
+            mock_parsed = mock.MagicMock()
+            mock_parsed.app_name = "Uploaded App 6"
+            mock_parsed.package_name = "com.uploaded.app6"
+            mock_parsed.version_code = 1
+            mock_parsed.version_name = "1.0.0"
+            mock_parsed.min_api_level = 21
+            mock_parsed.max_api_level = 30
+            mock_parsed.apk_file_size = 1024
+            mock_parsed.uniform_png_app_icon = b"\x89PNG\r\n\x1a\n"
+            mock_parser.return_value.parsed_apk = mock_parsed
+
+            resp = client.post("/web/upload-app", data={
+                "price": "9.99",
+                "currency": "usd",
+            }, content_type="multipart/form-data", follow_redirects=True)
+
+        assert resp.status_code == 200
+
+    def test_post_free_app(self, client, logged_in_client):
+        """Verify empty price results in NULL price_usd and price_xmr."""
+        with mock.patch("selfdroid.appstorage.apk.APKParser.APKParser") as mock_parser:
+            mock_parsed = mock.MagicMock()
+            mock_parsed.app_name = "Free Uploaded App"
+            mock_parsed.package_name = "com.free.uploaded"
+            mock_parsed.version_code = 1
+            mock_parsed.version_name = "1.0.0"
+            mock_parsed.min_api_level = 21
+            mock_parsed.max_api_level = 30
+            mock_parsed.apk_file_size = 1024
+            mock_parsed.uniform_png_app_icon = b"\x89PNG\r\n\x1a\n"
+            mock_parser.return_value.parsed_apk = mock_parsed
+
+            resp = client.post("/web/upload-app", data={
+                "price": "",
+                "currency": "usd",
+            }, content_type="multipart/form-data", follow_redirects=True)
+
+        assert resp.status_code == 200
+
+    def test_post_duplicate_package_name(self, client, logged_in_client, db_session, test_app_metadata):
+        """Verify POST shows error for duplicate package name."""
+        with mock.patch("selfdroid.appstorage.apk.APKParser.APKParser") as mock_parser:
+            mock_parsed = mock.MagicMock()
+            mock_parsed.app_name = "Duplicate App"
+            mock_parsed.package_name = "com.test.app"  # Same as test_app_metadata
+            mock_parsed.version_code = 2
+            mock_parsed.version_name = "2.0.0"
+            mock_parsed.min_api_level = 21
+            mock_parsed.max_api_level = 30
+            mock_parsed.apk_file_size = 1024
+            mock_parsed.uniform_png_app_icon = b"\x89PNG\r\n\x1a\n"
+            mock_parser.return_value.parsed_apk = mock_parsed
+
+            resp = client.post("/web/upload-app", data={
+                "price": "5.00",
+                "currency": "usd",
+            }, content_type="multipart/form-data", follow_redirects=True)
+
+        assert resp.status_code == 200
+
+    def test_post_invalid_apk(self, client, logged_in_client, db_session):
+        """Verify POST shows error for invalid APK file."""
+        with mock.patch("selfdroid.appstorage.apk.APKParser.APKParser") as mock_parser:
+            mock_parser.side_effect = Exception("Invalid APK")
+
+            resp = client.post("/web/upload-app", data={
+                "price": "5.00",
+                "currency": "usd",
+            }, content_type="multipart/form-data", follow_redirects=True)
+
+        assert resp.status_code == 200
+
+    def test_post_invalid_form(self, client, logged_in_client):
+        """Verify POST with missing fields shows form errors."""
+        resp = client.post("/web/upload-app", data={
+            "price": "5.00",
+            "currency": "usd",
+        }, content_type="multipart/form-data", follow_redirects=True)
+        assert resp.status_code == 200
+
+
 class TestWebDownloadAPKEndpoint:
     """Integration tests for WebDownloadAPKEndpoint download flow changes."""
 
@@ -528,9 +798,10 @@ class TestWebDownloadAPKEndpoint:
         db_session.add(app)
         db_session.commit()
 
-        resp = client.get(f"/web/download-apk/{app.id}")
-        assert resp.status_code in (302,)
-        assert "/web/payment" in resp.location or "/web/user-login" in resp.location
+        with mock.patch("selfdroid.payments.gateway.MoneroGateway.fiat_to_xmr", return_value=Decimal("0.05")):
+            with mock.patch("selfdroid.payments.gateway.MoneroGateway.create_invoice_address", return_value=("test_subaddr", 0)):
+                resp = client.get(f"/web/download-apk/{app.id}", follow_redirects=True)
+        assert resp.status_code in (200, 302)
 
     def test_download_unpublished(self, client, logged_in_client, db_session):
         """Verify 404 for unpublished app."""

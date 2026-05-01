@@ -38,7 +38,7 @@ class PaymentDownloadEndpoint(WebAtLeastUserEndpointBase, EndpointWithAppIDBase)
 
         if sale is None or sale.payment_status != "confirmed":
             self.message_collector.add_error_message("Payment not confirmed. Please complete the payment first.")
-            self.redirect_and_finish_request("web_blueprint.fl_web_user_upload")
+            self.redirect_and_finish_request("web_blueprint.fl_web_user_upload_app")
             return
 
         app_id = sale.app_id

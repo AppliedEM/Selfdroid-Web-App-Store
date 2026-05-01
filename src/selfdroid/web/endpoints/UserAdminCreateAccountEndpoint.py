@@ -44,4 +44,6 @@ class UserAdminCreateAccountEndpoint(WebAdminEndpointBase):
             except ValueError as e:
                 self.message_collector.add_error_message(str(e))
 
-        self.redirect_and_finish_request("web_blueprint.fl_web_admin_user_accounts")
+            self.redirect_and_finish_request("web_blueprint.fl_web_admin_user_accounts")
+
+        self.render_template_and_finish_request("admin_user_accounts.html", all_accounts=UserAccountManager.get_all_accounts(), create_form=create_form)

@@ -113,12 +113,12 @@ def fl_web_user_upload_app(**url_params):
 
 
 # Admin: manage user accounts
-@web_blueprint.route("/admin/user-accounts", methods=["GET"])
+@web_blueprint.route("/admin/user-accounts", methods=["GET", "POST"])
 def fl_web_admin_user_accounts(**url_params):
     return EndpointExecutor(UserAdminManageAccountsEndpoint, url_params).execute()
 
 
-@web_blueprint.route("/admin/create-account", methods=["POST"])
+@web_blueprint.route("/admin/create-account", methods=["GET", "POST"])
 def fl_web_admin_create_account(**url_params):
     return EndpointExecutor(UserAdminCreateAccountEndpoint, url_params).execute()
 
@@ -145,16 +145,16 @@ def fl_web_payment_create_invoice(**url_params):
     return EndpointExecutor(PaymentCreateInvoiceEndpoint, url_params).execute()
 
 
-@web_blueprint.route("/payment/check-status/<int:sale_id>", methods=["GET"])
+@web_blueprint.route("/payment/check-status/<int:app_id>", methods=["GET"])
 def fl_web_payment_check_status(**url_params):
     return EndpointExecutor(PaymentCheckStatusEndpoint, url_params).execute()
 
 
-@web_blueprint.route("/payment/download/<int:sale_id>", methods=["GET"])
+@web_blueprint.route("/payment/download/<int:app_id>", methods=["GET"])
 def fl_web_payment_download(**url_params):
     return EndpointExecutor(PaymentDownloadEndpoint, url_params).execute()
 
 
-@web_blueprint.route("/payment/qr/<int:sale_id>", methods=["GET"])
+@web_blueprint.route("/payment/qr/<int:app_id>", methods=["GET"])
 def fl_web_payment_qr(**url_params):
     return EndpointExecutor(PaymentQREndpoint, url_params).execute()

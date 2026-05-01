@@ -24,6 +24,7 @@ from typing import Dict, Any
 import flask
 from sqlalchemy import select
 from selfdroid.web.endpointbases.WebAdminEndpointBase import WebAdminEndpointBase
+from selfdroid.web.forms.UserAccountForms import UserAdminCreateAccountForm
 from selfdroid.appstorage.UserAccountDBModel import UserAccountDBModel
 from selfdroid.appstorage.crud.UserAccountManager import UserAccountManager
 from selfdroid import db
@@ -58,4 +59,5 @@ class UserAdminManageAccountsEndpoint(WebAdminEndpointBase):
             self.message_collector.add_success_message("Account deleted along with all associated apps.")
 
         all_accounts = UserAccountManager.get_all_accounts()
-        self.render_template_and_finish_request("admin_user_accounts.html", all_accounts=all_accounts)
+        create_form = UserAdminCreateAccountForm()
+        self.render_template_and_finish_request("admin_user_accounts.html", all_accounts=all_accounts, create_form=create_form)

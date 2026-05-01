@@ -19,10 +19,10 @@ Copyright (c) 2021 Vít Labuda. All rights reserved.
             <h2>User Accounts</h2>
         </div>
         <div class="col-md-6 my-1 text-end">
-            <a class="btn btn-success" href="{{ url_for('web_blueprint.fl_web_admin_create_account') }}">
+            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#createAccountModal">
                 <span class="bi bi-plus-square"></span>
                 <span class="ms-1">Create Account</span>
-            </a>
+            </button>
         </div>
     </div>
 
@@ -55,18 +55,18 @@ Copyright (c) 2021 Vít Labuda. All rights reserved.
                                     <td>{{ account.created_at|tf_format_datetime }}</td>
                                     <td class="selfdroid-shrink">
                                         {% if account.is_active %}
-                                            <a class="btn btn-sm btn-warning" href="{{ url_for('web_blueprint.fl_web_admin_manage_accounts', action='deactivate', account_id=account.id) }}" role="button" onclick="return confirm('Deactivate this account?')">
+                                            <a class="btn btn-sm btn-warning" href="{{ url_for('web_blueprint.fl_web_admin_user_accounts', action='deactivate', account_id=account.id) }}" role="button" onclick="return confirm('Deactivate this account?')">
                                                 <span class="bi bi-person-x"></span>
                                             </a>
                                         {% else %}
-                                            <a class="btn btn-sm btn-success" href="{{ url_for('web_blueprint.fl_web_admin_manage_accounts', action='activate', account_id=account.id) }}" role="button" onclick="return confirm('Activate this account?')">
+                                            <a class="btn btn-sm btn-success" href="{{ url_for('web_blueprint.fl_web_admin_user_accounts', action='activate', account_id=account.id) }}" role="button" onclick="return confirm('Activate this account?')">
                                                 <span class="bi bi-person-check"></span>
                                             </a>
                                         {% endif %}
                                         <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#resetPasswordModal{{ account.id }}">
                                             <span class="bi bi-key"></span>
                                         </button>
-                                        <a class="btn btn-sm btn-danger" href="{{ url_for('web_blueprint.fl_web_admin_manage_accounts', action='delete', account_id=account.id) }}" role="button" onclick="return confirm('Delete this account and all associated apps? This cannot be undone!')">
+                                        <a class="btn btn-sm btn-danger" href="{{ url_for('web_blueprint.fl_web_admin_user_accounts', action='delete', account_id=account.id) }}" role="button" onclick="return confirm('Delete this account and all associated apps? This cannot be undone!')">
                                             <span class="bi bi-trash"></span>
                                         </a>
 
@@ -74,7 +74,7 @@ Copyright (c) 2021 Vít Labuda. All rights reserved.
                                         <div class="modal fade" tabindex="-1" id="resetPasswordModal{{ account.id }}" aria-hidden="true">
                                             <div class="modal-dialog">
                                                 <div class="modal-content">
-                                                    <form action="{{ url_for('web_blueprint.fl_web_admin_manage_accounts', action='reset_password', account_id=account.id) }}" method="POST">
+                                                    <form action="{{ url_for('web_blueprint.fl_web_admin_user_accounts', action='reset_password', account_id=account.id) }}" method="POST">
                                                         <div class="modal-header">
                                                             <h5 class="modal-title">Reset Password for {{ account.username }}</h5>
                                                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -104,6 +104,35 @@ Copyright (c) 2021 Vít Labuda. All rights reserved.
                     <i>No user accounts have been created yet.</i>
                 </div>
             {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Create Account Modal -->
+<div class="modal fade" tabindex="-1" id="createAccountModal" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="{{ url_for('web_blueprint.fl_web_admin_create_account') }}" method="POST">
+                {{ create_form.hidden_tag() }}
+                <div class="modal-header">
+                    <h5 class="modal-title">Create New User Account</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group mb-3">
+                        <label class="form-label">Username</label>
+                        {{ create_form.username(class_='form-control', required=True, maxlength='128') }}
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Password</label>
+                        {{ create_form.password(class_='form-control', required=True, minlength='8') }}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Account</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>

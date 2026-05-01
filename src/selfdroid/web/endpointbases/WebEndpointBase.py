@@ -68,3 +68,7 @@ class WebEndpointBase(EndpointBase, metaclass=abc.ABCMeta):
 
         sent_file = flask.send_from_directory(directory, filename, **send_file_kwargs)
         self.finish_request(sent_file)
+
+    def jsonify_and_finish_request(self, data: Dict[str, Any]) -> None:
+        response = flask.jsonify(data)
+        self.finish_request(response)

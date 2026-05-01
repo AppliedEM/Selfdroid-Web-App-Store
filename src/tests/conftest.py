@@ -31,7 +31,7 @@ def app_config():
         "WTF_CSRF_ENABLED": False,
         "SESSION_COOKIE_SECURE": False,
         "SESSION_COOKIE_HTTPONLY": True,
-        "SESSION_COOKIE_SAMESITE": True,
+        "SESSION_COOKIE_SAMESITE": "Lax",
     }
 
 

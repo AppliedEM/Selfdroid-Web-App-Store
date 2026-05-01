@@ -51,8 +51,9 @@ class PaymentCreateInvoiceEndpoint(WebAtLeastUserEndpointBase, EndpointWithAppID
         amount_usd = float(app.price_usd) if app.price_usd else 0
         amount_xmr = float(app.price_xmr) if app.price_xmr else 0
 
+        gateway = MoneroGateway()
+
         if amount_xmr == 0:
-            gateway = MoneroGateway()
             try:
                 amount_xmr = float(gateway.fiat_to_xmr(Decimal(str(amount_usd))))
             except MoneroPaymentError:

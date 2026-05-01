@@ -29,6 +29,12 @@ from selfdroid.FinishRequestException import FinishRequestException
 class EndpointBase(metaclass=abc.ABCMeta):
     def __init__(self, url_params: Dict[str, Any]):
         self.url_params: Dict[str, Any] = url_params
+        # Only propagate url_params if the next class in MRO is not object
+        mro = type(self).__mro__
+        self_idx = mro.index(EndpointBase)
+        next_idx = self_idx + 1
+        if next_idx < len(mro) and mro[next_idx] is not object:
+            super().__init__(url_params)
 
     @abc.abstractmethod
     def handle_request(self) -> None:

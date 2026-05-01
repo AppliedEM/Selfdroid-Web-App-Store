@@ -47,6 +47,7 @@ db = flask_sqlalchemy.SQLAlchemy(app)
 from selfdroid.appstorage.AppMetadataDBModel import AppMetadataDBModel
 from selfdroid.appstorage.UserAccountDBModel import UserAccountDBModel
 from selfdroid.appstorage.AppSaleDBModel import AppSaleDBModel
+from selfdroid.payments.invoice import PaymentInvoice
 
 with app.app_context():
     db.create_all()

@@ -43,7 +43,7 @@ class UserUploadAppEndpoint(WebAtLeastUserEndpointBase):
 
         if upload_form.validate_on_submit():
             self._perform_upload(upload_form)
-            self.redirect_and_finish_request("web_blueprint.fl_web_user_upload")
+            self.redirect_and_finish_request("web_blueprint.fl_web_user_upload_app")
 
         self.render_template_and_finish_request("web_user_upload.html", upload_form=upload_form)
 

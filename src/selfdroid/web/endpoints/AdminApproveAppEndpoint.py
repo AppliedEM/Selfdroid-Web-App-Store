@@ -24,11 +24,12 @@ from typing import Dict, Any
 import datetime
 import flask
 from selfdroid.web.endpointbases.WebAdminEndpointBase import WebAdminEndpointBase
+from selfdroid.EndpointWithAppIDBase import EndpointWithAppIDBase
 from selfdroid.appstorage.AppMetadataDBModel import AppMetadataDBModel
 from selfdroid import db
 
 
-class AdminApproveAppEndpoint(WebAdminEndpointBase):
+class AdminApproveAppEndpoint(WebAdminEndpointBase, EndpointWithAppIDBase):
     def handle_request(self) -> None:
         app_id = self.app_id_from_url_params
         app = db.session.get(AppMetadataDBModel, app_id)

@@ -29,5 +29,4 @@ class EndpointWithAppIDBase(metaclass=abc.ABCMeta):
     def __init__(self, url_params: Dict[str, Any]):
         if ("app_id" not in url_params) or not isinstance(url_params["app_id"], int):
             flask.abort(500)
-
         self.app_id_from_url_params: int = url_params["app_id"]

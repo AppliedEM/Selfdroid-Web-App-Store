@@ -53,7 +53,7 @@ class Constants:
         "strict_transport_security": False,  # HSTS should be set on the internet-facing web server, if needed.
         "frame_options": "DENY",
         "referrer_policy": "same-origin",
-        "session_cookie_secure": True,  # This seems not to work (at least when accessing the web app via the Flask development server) -> it's set using app.config too.
+        "session_cookie_secure": False,  # Set to False for HTTP dev; change to True behind HTTPS proxy in production.
         "session_cookie_http_only": True,  # This seems not to work (at least when accessing the web app via the Flask development server) -> it's set using app.config too.
         "force_file_save": True,
         "content_security_policy": {

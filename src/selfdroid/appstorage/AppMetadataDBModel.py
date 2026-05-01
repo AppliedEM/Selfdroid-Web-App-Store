@@ -55,3 +55,8 @@ class AppMetadataDBModel(db.Model):
 
     added_datetime = db.Column(db.DateTime(), default=datetime.datetime.utcnow, nullable=False)
     last_updated_datetime = db.Column(db.DateTime(), default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow, nullable=False)
+
+    @property
+    def is_free(self):
+        """Return True if the app has no price (free)."""
+        return self.price_usd is None or float(self.price_usd) == 0
