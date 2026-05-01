@@ -22,9 +22,11 @@
 
 from typing import Dict, Any
 import flask
+from sqlalchemy import select
 from selfdroid.web.endpointbases.WebAdminEndpointBase import WebAdminEndpointBase
 from selfdroid.appstorage.UserAccountDBModel import UserAccountDBModel
 from selfdroid.appstorage.crud.UserAccountManager import UserAccountManager
+from selfdroid import db
 
 
 class UserAdminManageAccountsEndpoint(WebAdminEndpointBase):
@@ -37,10 +39,9 @@ class UserAdminManageAccountsEndpoint(WebAdminEndpointBase):
             self.message_collector.add_success_message("Account deactivated.")
 
         elif action == "activate" and account_id:
-            account = UserAccountDBModel.query.get(account_id)
+            account = db.session.get(UserAccountDBModel, account_id)
             if account:
                 account.is_active = True
-                from selfdroid import db
                 db.session.commit()
                 self.message_collector.add_success_message("Account activated.")
 

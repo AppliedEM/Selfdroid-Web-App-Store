@@ -22,12 +22,14 @@
 
 from typing import Dict, Any
 import flask
+from sqlalchemy import select
 from selfdroid.web.endpointbases.WebAdminEndpointBase import WebAdminEndpointBase
 from selfdroid.appstorage.AppMetadataDBModel import AppMetadataDBModel
-from selfdroid.appstorage.crud.AppGetter import AppGetter
+from selfdroid import db
 
 
 class AdminPendingSubmissionsEndpoint(WebAdminEndpointBase):
     def handle_request(self) -> None:
-        pending_apps = AppMetadataDBModel.query.filter_by(is_approved=False).order_by(AppMetadataDBModel.added_datetime.desc()).all()
+        stmt = select(AppMetadataDBModel).filter_by(is_approved=False).order_by(AppMetadataDBModel.added_datetime.desc())
+        pending_apps = db.session.execute(stmt).scalars().all()
         self.render_template_and_finish_request("admin_pending_submissions.html", pending_apps=pending_apps)

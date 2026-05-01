@@ -21,25 +21,32 @@
 
 
 from typing import List, Optional
+from sqlalchemy import select
+from flask import abort
+from selfdroid import db
 from selfdroid.appstorage.AppMetadata import AppMetadata
 from selfdroid.appstorage.AppMetadataDBModel import AppMetadataDBModel
 
 
 class AppGetter:
     def get_all_db_models_while_locked(self) -> List[AppMetadataDBModel]:
-        return AppMetadataDBModel.query.order_by(AppMetadataDBModel.app_name).all()
+        stmt = select(AppMetadataDBModel).order_by(AppMetadataDBModel.app_name)
+        return db.session.execute(stmt).scalars().all()
 
     def get_all_metadata_while_locked(self) -> List[AppMetadata]:
         return [self._convert_db_model_to_metadata(db_model) for db_model in self.get_all_db_models_while_locked()]
 
     def get_db_model_while_locked(self, app_id: int) -> Optional[AppMetadataDBModel]:
-        return AppMetadataDBModel.query.get(app_id)
+        return db.session.get(AppMetadataDBModel, app_id)
 
     def get_metadata_while_locked(self, app_id: int) -> Optional[AppMetadata]:
         return self._convert_db_model_to_metadata(self.get_db_model_while_locked(app_id))
 
     def get_db_model_or_404_while_locked(self, app_id: int) -> AppMetadataDBModel:
-        return AppMetadataDBModel.query.get_or_404(app_id)
+        app = db.session.get(AppMetadataDBModel, app_id)
+        if app is None:
+            abort(404)
+        return app
 
     def get_metadata_or_404_while_locked(self, app_id: int) -> AppMetadata:
         return self._convert_db_model_to_metadata(self.get_db_model_or_404_while_locked(app_id))

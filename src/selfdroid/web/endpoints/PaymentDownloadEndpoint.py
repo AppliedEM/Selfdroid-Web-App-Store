@@ -28,6 +28,7 @@ from selfdroid.web.endpointbases.WebAtLeastUserEndpointBase import WebAtLeastUse
 from selfdroid.EndpointWithAppIDBase import EndpointWithAppIDBase
 from selfdroid.appstorage.crud.AppSaleManager import AppSaleManager
 from selfdroid.appstorage.AppMetadataDBModel import AppMetadataDBModel
+from selfdroid import db
 
 
 class PaymentDownloadEndpoint(WebAtLeastUserEndpointBase, EndpointWithAppIDBase):
@@ -41,7 +42,7 @@ class PaymentDownloadEndpoint(WebAtLeastUserEndpointBase, EndpointWithAppIDBase)
             return
 
         app_id = sale.app_id
-        app = AppMetadataDBModel.query.get(app_id)
+        app = db.session.get(AppMetadataDBModel, app_id)
         if app is None:
             flask.abort(404)
 

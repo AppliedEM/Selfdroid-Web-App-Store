@@ -20,12 +20,13 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
+import flask
 from selfdroid.UserReadableException import UserReadableException
 from selfdroid.web.endpointbases.WebPublicOnlyEndpointBase import WebPublicOnlyEndpointBase
 from selfdroid.web.forms.UserAccountForms import UserAccountLoginForm
 from selfdroid.appstorage.UserAccountDBModel import UserAccountDBModel
 from selfdroid.appstorage.crud.UserAccountManager import UserAccountManager
-import flask
+from sqlalchemy import select
 
 
 class UserLoginEndpoint(WebPublicOnlyEndpointBase):

@@ -4,8 +4,6 @@
 #
 # Redistribution and use in source and binary forms, with or without modification, are permitted provided that the
 # following conditions are met:
-#  1. Redistributions of source and binary forms, with or without modification, are permitted provided that the
-#     following conditions are met:
 #  1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following
 #     disclaimer.
 #  2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the
@@ -27,6 +25,7 @@ import os
 import tempfile
 import flask
 from decimal import Decimal
+from sqlalchemy import select
 from selfdroid.web.endpointbases.WebAtLeastUserEndpointBase import WebAtLeastUserEndpointBase
 from selfdroid.web.forms.UserUploadAppForm import UserUploadAppForm
 from selfdroid.appstorage.AppMetadataDBModel import AppMetadataDBModel
@@ -65,7 +64,8 @@ class UserUploadAppEndpoint(WebAtLeastUserEndpointBase):
             with AppStorageHelpers.get_app_storage_lock():
                 # Check for duplicate package name
                 parsed_apk = __import__("selfdroid.appstorage.apk.APKParser", fromlist=["APKParser"]).APKParser(temp_apk_path).parsed_apk
-                duplicate = AppMetadataDBModel.query.filter_by(package_name=parsed_apk.package_name).first()
+                stmt = select(AppMetadataDBModel).filter_by(package_name=parsed_apk.package_name)
+                duplicate = db.session.execute(stmt).scalar()
                 if duplicate is not None:
                     self.message_collector.add_error_message(f"An app with package name '{parsed_apk.package_name}' already exists!")
                     return

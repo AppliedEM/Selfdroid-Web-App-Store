@@ -13,9 +13,10 @@ import qrcode
 import io
 import base64
 from decimal import Decimal
+from sqlalchemy import select
 from flask import (
     Blueprint, request, jsonify, render_template, url_for,
-    redirect, send_file
+    redirect, send_file, abort
 )
 from selfdroid.EndpointExecutor import EndpointExecutor
 from selfdroid.web.authenticator.WebAuthenticator import WebAuthenticator
@@ -114,7 +115,10 @@ def fl_web_payment_checkout():
 @web_payments_blueprint.route("/payment-status/<int:invoice_id>", methods=["GET"])
 def fl_web_payment_status(invoice_id):
     """Check the status of a payment invoice."""
-    invoice = PaymentInvoice.query.get_or_404(invoice_id)
+    stmt = select(PaymentInvoice).filter_by(id=invoice_id)
+    invoice = db.session.execute(stmt).scalar()
+    if invoice is None:
+        abort(404)
     result = gateway.check_payment(
         invoice.subaddress,
         Decimal(invoice.amount_xmr),
@@ -129,7 +133,10 @@ def fl_web_payment_status(invoice_id):
 @web_payments_blueprint.route("/payment-qr/<int:invoice_id>", methods=["GET"])
 def fl_web_payment_qr(invoice_id):
     """Return a QR code image for a payment invoice."""
-    invoice = PaymentInvoice.query.get_or_404(invoice_id)
+    stmt = select(PaymentInvoice).filter_by(id=invoice_id)
+    invoice = db.session.execute(stmt).scalar()
+    if invoice is None:
+        abort(404)
     xmr_amount = Decimal(invoice.amount_xmr)
     label = f"Selfdroid Order #{invoice.order_id}"
     payment_uri = gateway.generate_payment_uri(invoice.subaddress, xmr_amount, label)
@@ -165,7 +172,8 @@ def fl_web_payment_webhook():
     if not invoice_id:
         return jsonify({"error": "Missing invoice_id"}), 400
 
-    invoice = PaymentInvoice.query.get(invoice_id)
+    stmt = select(PaymentInvoice).filter_by(id=invoice_id)
+    invoice = db.session.execute(stmt).scalar()
     if not invoice:
         return jsonify({"error": "Invoice not found"}), 404
 

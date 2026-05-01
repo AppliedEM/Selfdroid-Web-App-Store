@@ -1,6 +1,7 @@
 import datetime
 from typing import Optional, List
 from decimal import Decimal
+from sqlalchemy import select
 from selfdroid import db
 from selfdroid.appstorage.AppSaleDBModel import AppSaleDBModel
 
@@ -26,15 +27,16 @@ class AppSaleManager:
 
     @staticmethod
     def get_by_app_and_user(app_id: int, buyer_user_id: int) -> Optional[AppSaleDBModel]:
-        return AppSaleDBModel.query.filter_by(
+        stmt = select(AppSaleDBModel).filter_by(
             app_id=app_id,
             buyer_user_id=buyer_user_id,
             payment_status="confirmed",
-        ).first()
+        )
+        return db.session.execute(stmt).scalar()
 
     @staticmethod
     def confirm_sale(sale_id: int, invoice_id: str = None) -> Optional[AppSaleDBModel]:
-        sale = AppSaleDBModel.query.get(sale_id)
+        sale = db.session.get(AppSaleDBModel, sale_id)
         if sale is None:
             return None
         sale.payment_status = "confirmed"
@@ -45,7 +47,7 @@ class AppSaleManager:
 
     @staticmethod
     def expire_sale(sale_id: int) -> Optional[AppSaleDBModel]:
-        sale = AppSaleDBModel.query.get(sale_id)
+        sale = db.session.get(AppSaleDBModel, sale_id)
         if sale is None:
             return None
         sale.payment_status = "expired"
@@ -54,8 +56,10 @@ class AppSaleManager:
 
     @staticmethod
     def get_pending_sales() -> List[AppSaleDBModel]:
-        return AppSaleDBModel.query.filter_by(payment_status="pending").order_by(AppSaleDBModel.created_at.desc()).all()
+        stmt = select(AppSaleDBModel).filter_by(payment_status="pending").order_by(AppSaleDBModel.created_at.desc())
+        return db.session.execute(stmt).scalars().all()
 
     @staticmethod
     def get_sales_for_user(user_id: int) -> List[AppSaleDBModel]:
-        return AppSaleDBModel.query.filter_by(buyer_user_id=user_id).order_by(AppSaleDBModel.created_at.desc()).all()
+        stmt = select(AppSaleDBModel).filter_by(buyer_user_id=user_id).order_by(AppSaleDBModel.created_at.desc())
+        return db.session.execute(stmt).scalars().all()

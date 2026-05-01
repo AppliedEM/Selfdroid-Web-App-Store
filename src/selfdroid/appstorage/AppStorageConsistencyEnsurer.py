@@ -24,6 +24,7 @@ from typing import Set
 import os
 import re
 import sqlalchemy.exc
+from sqlalchemy import select
 from selfdroid.Constants import Constants
 from selfdroid.appstorage.AppStorageHelpers import AppStorageHelpers
 from selfdroid.appstorage.AppMetadataDBModel import AppMetadataDBModel
@@ -57,7 +58,7 @@ class AppStorageConsistencyEnsurer:
 
     def _delete_app_from_all_places(self, app_id: int) -> None:
         try:
-            db_entry = AppMetadataDBModel.query.get(app_id)
+            db_entry = db.session.get(AppMetadataDBModel, app_id)
             if not db_entry:
                 raise AppStorageConsistencyEnsurer._NoSuchDBEntryException()
 
@@ -80,7 +81,8 @@ class AppStorageConsistencyEnsurer:
             pass
 
     def _get_all_app_ids_from_database(self) -> Set[int]:
-        db_entries = AppMetadataDBModel.query.all()
+        stmt = select(AppMetadataDBModel)
+        db_entries = db.session.execute(stmt).scalars().all()
         app_ids_iter = map(lambda db_entry: db_entry.id, db_entries)
 
         return set(app_ids_iter)

@@ -9,9 +9,11 @@ import threading
 import time
 import logging
 from decimal import Decimal
+from sqlalchemy import select, or_
 from selfdroid import app
 from selfdroid.payments.invoice import PaymentInvoice
 from selfdroid.payments.gateway import gateway
+from selfdroid import db
 
 logger = logging.getLogger(__name__)
 
@@ -56,9 +58,13 @@ class PaymentChecker:
 
     def _check_pending_invoices(self):
         """Check all pending invoices for payments."""
-        pending = PaymentInvoice.query.filter(
-            PaymentInvoice.status.in_(["pending", "confirming"])
-        ).all()
+        stmt = select(PaymentInvoice).filter(
+            or_(
+                PaymentInvoice.status == "pending",
+                PaymentInvoice.status == "confirming"
+            )
+        )
+        pending = db.session.execute(stmt).scalars().all()
 
         for invoice in pending:
             try:

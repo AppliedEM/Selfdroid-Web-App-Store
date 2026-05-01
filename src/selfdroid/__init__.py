@@ -48,8 +48,9 @@ from selfdroid.appstorage.AppMetadataDBModel import AppMetadataDBModel
 from selfdroid.appstorage.UserAccountDBModel import UserAccountDBModel
 from selfdroid.appstorage.AppSaleDBModel import AppSaleDBModel
 
-db.create_all()
-db.session.commit()
+with app.app_context():
+    db.create_all()
+    db.session.commit()
 
 
 from selfdroid.api import api_blueprint

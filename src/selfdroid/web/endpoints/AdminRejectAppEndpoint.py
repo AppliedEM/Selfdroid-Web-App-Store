@@ -30,7 +30,7 @@ from selfdroid import db
 class AdminRejectAppEndpoint(WebAdminEndpointBase):
     def handle_request(self) -> None:
         app_id = self.app_id_from_url_params
-        app = AppMetadataDBModel.query.get(app_id)
+        app = db.session.get(AppMetadataDBModel, app_id)
         if app is None:
             flask.abort(404)
 

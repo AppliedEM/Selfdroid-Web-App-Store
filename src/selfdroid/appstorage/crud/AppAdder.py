@@ -22,6 +22,7 @@
 
 import os
 import sqlalchemy.exc
+from sqlalchemy import select
 from selfdroid.appstorage.AppMetadata import AppMetadata
 from selfdroid.appstorage.AppMetadataDBModel import AppMetadataDBModel
 from selfdroid.appstorage.AppStorageConsistencyEnsurer import AppStorageConsistencyEnsurer
@@ -66,7 +67,8 @@ class AppAdder:
         return self._perform_app_addition()
 
     def _check_if_app_can_be_added(self) -> None:
-        an_app_with_the_same_package_name = AppMetadataDBModel.query.filter_by(package_name=self._parsed_apk.package_name).first()
+        stmt = select(AppMetadataDBModel).filter_by(package_name=self._parsed_apk.package_name)
+        an_app_with_the_same_package_name = db.session.execute(stmt).scalar()
         if an_app_with_the_same_package_name is not None:
             html_message = WebStatusMessageCollector.format_html_message("An app with the same package name <i>({})</i> is already present on the server! You should update the app instead of adding it!", self._parsed_apk.package_name)
             raise AppAdderException(html_message)

@@ -28,12 +28,13 @@ from selfdroid.EndpointWithAppIDBase import EndpointWithAppIDBase
 from selfdroid.appstorage.AppMetadataDBModel import AppMetadataDBModel
 from selfdroid.appstorage.crud.AppSaleManager import AppSaleManager
 from selfdroid.payments.gateway import MoneroGateway, MoneroPaymentError
+from selfdroid import db
 
 
 class PaymentCreateInvoiceEndpoint(WebAtLeastUserEndpointBase, EndpointWithAppIDBase):
     def handle_request(self) -> None:
         app_id = self.app_id_from_url_params
-        app = AppMetadataDBModel.query.get(app_id)
+        app = db.session.get(AppMetadataDBModel, app_id)
         if app is None:
             flask.abort(404)
 

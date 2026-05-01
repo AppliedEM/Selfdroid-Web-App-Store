@@ -1,13 +1,16 @@
 import bcrypt
 from typing import Optional, List
+from sqlalchemy import select
 from selfdroid import db
 from selfdroid.appstorage.UserAccountDBModel import UserAccountDBModel
+from selfdroid.appstorage.AppMetadataDBModel import AppMetadataDBModel
 
 
 class UserAccountManager:
     @staticmethod
     def create_account(username: str, password: str, created_by_id: int) -> UserAccountDBModel:
-        existing = UserAccountDBModel.query.filter_by(username=username).first()
+        stmt = select(UserAccountDBModel).filter_by(username=username)
+        existing = db.session.execute(stmt).scalar()
         if existing is not None:
             raise ValueError(f"Username '{username}' is already taken!")
 
@@ -24,7 +27,8 @@ class UserAccountManager:
 
     @staticmethod
     def authenticate(username: str, password: str) -> Optional[UserAccountDBModel]:
-        account = UserAccountDBModel.query.filter_by(username=username).first()
+        stmt = select(UserAccountDBModel).filter_by(username=username)
+        account = db.session.execute(stmt).scalar()
         if account is None:
             return None
         if not account.is_active:
@@ -43,25 +47,28 @@ class UserAccountManager:
 
     @staticmethod
     def get_by_id(user_id: int) -> Optional[UserAccountDBModel]:
-        return UserAccountDBModel.query.get(user_id)
+        return db.session.get(UserAccountDBModel, user_id)
 
     @staticmethod
     def get_by_username(username: str) -> Optional[UserAccountDBModel]:
-        return UserAccountDBModel.query.filter_by(username=username).first()
+        stmt = select(UserAccountDBModel).filter_by(username=username)
+        return db.session.execute(stmt).scalar()
 
     @staticmethod
     def get_all_accounts() -> List[UserAccountDBModel]:
-        return UserAccountDBModel.query.order_by(UserAccountDBModel.created_at.desc()).all()
+        stmt = select(UserAccountDBModel).order_by(UserAccountDBModel.created_at.desc())
+        return db.session.execute(stmt).scalars().all()
 
     @staticmethod
     def deactivate_account(account_id: int) -> bool:
-        account = UserAccountDBModel.query.get(account_id)
+        account = db.session.get(UserAccountDBModel, account_id)
         if account is None:
             return False
         account.is_active = False
         db.session.commit()
 
-        apps = db.session.query(UserAccountDBModel).filter_by(owner_username=account.username).all()
+        stmt = select(AppMetadataDBModel).filter_by(owner_username=account.username)
+        apps = db.session.execute(stmt).scalars().all()
         for app in apps:
             app.owner_username = None
             app.uploaded_by = None
@@ -71,7 +78,7 @@ class UserAccountManager:
 
     @staticmethod
     def reset_password(account_id: int, new_password: str) -> bool:
-        account = UserAccountDBModel.query.get(account_id)
+        account = db.session.get(UserAccountDBModel, account_id)
         if account is None:
             return False
 
@@ -82,7 +89,7 @@ class UserAccountManager:
 
     @staticmethod
     def delete_account(account_id: int) -> bool:
-        account = UserAccountDBModel.query.get(account_id)
+        account = db.session.get(UserAccountDBModel, account_id)
         if account is None:
             return False
 
@@ -90,7 +97,8 @@ class UserAccountManager:
         db.session.delete(account)
         db.session.commit()
 
-        apps = db.session.query(UserAccountDBModel).filter_by(owner_username=username).all()
+        stmt = select(AppMetadataDBModel).filter_by(owner_username=username)
+        apps = db.session.execute(stmt).scalars().all()
         for app in apps:
             db.session.delete(app)
         db.session.commit()
@@ -98,7 +106,7 @@ class UserAccountManager:
 
     @staticmethod
     def change_password_for_self(account_id: int, old_password: str, new_password: str) -> bool:
-        account = UserAccountDBModel.query.get(account_id)
+        account = db.session.get(UserAccountDBModel, account_id)
         if account is None:
             return False
 
