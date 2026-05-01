@@ -105,7 +105,7 @@ Before creating the `app_metadata` row, create an `UploadedApp` record that:
 - Admin reviews and approves → then `app_metadata` is created
 
 **Decision point:** Do we want an intermediate `UploadedApp` model, or go straight to creating `app_metadata` with `is_approved=False`?
-A: Yes. We'll definitely need a model for UploadedApp. Will likely need to contain the following:
+A: Yes, but just go straight to adding to the app_metadata table. Probably not necessary to add an intermediate model, but ask if you think that should change during implementation. Will likely need to contain the following:
   1. id  
   2. name (string)
   3. hash (md5)
@@ -303,7 +303,7 @@ authenticated user → get app metadata
   → if app is_published AND (is_free OR price == 0):
       download APK (existing behavior)
   → if paid app:
-      check if user has confirmed sale for this app
+      check if user has confirmed sale for this app (check by package name)
         → YES: download APK
         → NO: redirect to payment page
   → if not published:
@@ -458,16 +458,30 @@ New fields in API response:
 ## 12. Open Questions / Decisions Needed
 
 1. **User login page**: Should dedicated user login be on the same page as shared password login, or a separate page?
+  * just leave as-is for now.
 2. **Admin account creation**: Should admin set the password directly, or auto-generate and email it to the user?
+  * just let the admin set it directly. no need to get fancy for now.
 3. **Password reset**: Can users reset their own password, or must admin do it?
+  * users can reset their password, but only after they've already logged in. admin must do it otherwise.
 4. **USD payments**: What payment processor for USD? (Stripe, PayPal, manual bank transfer?)
+  * all payments are in monero. specifying an amount in usd will simply transfer the equivalent spot price in monero (determined via coingecko)
 5. **Upload limit**: Should there be a per-user upload limit? (e.g., max 5 submissions)
+  * implement later. create a "future_development.md" doc and add this to that.
 6. **Revenue split**: Does the platform take a cut of paid app sales?
+  * yes, but we'll implement later. add to future_development.md
 7. **Refund policy**: What happens if a user pays but the app is later removed?
+  * nothing for now. add to future_development.md
 8. **Upload via API**: Should the public API support app upload (not just web)?
+  * not right now. add to future_development.md
 9. **Intermediate model**: Do we need `UploadedApp` as a staging table, or go straight to `app_metadata` with `is_approved=False`?
+  * nope. just add this and the other changes I mentioned to the app_metadata table.
 10. **Price updates**: Can users change the price after uploading?
+  * yeah, they'll also probably need to do other things like change the name, description, and take it down. this will need to be implemented. good question.
 11. **Currency conversion display**: Should we always show both USD and XMR prices on the details page?
+  * yes.
 12. **QR code library**: Do we have a Python QR code library, or need to add one? (python-qrcode + Pillow)
+  * we'll need to add one. yeah use https://pypi.org/project/qrcode/ and pillow (install pillow first)
 13. **Account deactivation**: When an account is deactivated, what happens to their uploaded apps? (keep, delete, or transfer?)
+  * delete. if they need to reactivate and reupload their apps we can do that.
 14. **Bulk account creation**: Should admin be able to upload a CSV to create multiple accounts at once?
+  * yes but later. just add an endpoint for it and we can implement a CL tool for it.
