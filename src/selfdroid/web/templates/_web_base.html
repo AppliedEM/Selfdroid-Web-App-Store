@@ -86,6 +86,15 @@
 
                     <div class="collapse navbar-collapse" id="webNavbar">
                         <ul class="navbar-nav ms-auto">
+                            {% if has_admin_privileges %}
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{{ url_for('web_blueprint.fl_web_admin_pending') }}">Pending</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{{ url_for('web_blueprint.fl_web_admin_user_accounts') }}">Accounts</a>
+                                </li>
+                            {% endif %}
+
                             {% if logout_form %}
                                 <li class="nav-item">
                                     <form action="{{ url_for('web_blueprint.fl_web_logout') }}" method="POST">

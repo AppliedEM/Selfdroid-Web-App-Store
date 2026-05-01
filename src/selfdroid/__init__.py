@@ -45,6 +45,8 @@ app.config["SESSION_COOKIE_SAMESITE"] = True
 
 db = flask_sqlalchemy.SQLAlchemy(app)
 from selfdroid.appstorage.AppMetadataDBModel import AppMetadataDBModel
+from selfdroid.appstorage.UserAccountDBModel import UserAccountDBModel
+from selfdroid.appstorage.AppSaleDBModel import AppSaleDBModel
 
 db.create_all()
 db.session.commit()

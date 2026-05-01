@@ -21,28 +21,26 @@
 
 
 from typing import Dict, Any
+import datetime
 import flask
-from selfdroid.Constants import Constants
-from selfdroid.Settings import Settings
-from selfdroid.web.authenticator.WebAuthenticator import WebAuthenticator
-from selfdroid.web.forms.WebLogoutForm import WebLogoutForm
+from selfdroid.web.endpointbases.WebAdminEndpointBase import WebAdminEndpointBase
+from selfdroid.appstorage.AppMetadataDBModel import AppMetadataDBModel
+from selfdroid import db
 
 
-class WebHelpers:
-    @staticmethod
-    def generate_web_template_context() -> Dict[str, Any]:
-        return_dict = {
-            "Constants": Constants,
-            "Settings": Settings
-        }
+class AdminApproveAppEndpoint(WebAdminEndpointBase):
+    def handle_request(self) -> None:
+        app_id = self.app_id_from_url_params
+        app = AppMetadataDBModel.query.get(app_id)
+        if app is None:
+            flask.abort(404)
 
-        authenticator = WebAuthenticator()
-        return_dict["has_at_least_user_privileges"] = authenticator.has_at_least_user_privileges()
-        return_dict["has_admin_privileges"] = authenticator.has_admin_privileges()
+        user_id = flask.session.get("user_account_id", 1)
+        app.is_approved = True
+        app.is_published = True
+        app.approved_by = user_id
+        app.approved_at = datetime.datetime.utcnow()
+        db.session.commit()
 
-        if authenticator.has_at_least_user_privileges():
-            return_dict["logout_form"] = WebLogoutForm()
-            return_dict["user_account_id"] = flask.session.get("user_account_id", None)
-            return_dict["user_account_username"] = flask.session.get("user_account_username", None)
-
-        return return_dict
+        self.message_collector.add_success_message(f"App '{app.app_name}' approved and published!")
+        self.redirect_and_finish_request("web_blueprint.fl_web_admin_pending")

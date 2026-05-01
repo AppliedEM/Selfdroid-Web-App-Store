@@ -32,6 +32,17 @@ from selfdroid.web.endpoints.WebDownloadAPKEndpoint import WebDownloadAPKEndpoin
 from selfdroid.web.endpoints.WebAddAppEndpoint import WebAddAppEndpoint
 from selfdroid.web.endpoints.WebUpdateAppEndpoint import WebUpdateAppEndpoint
 from selfdroid.web.endpoints.WebDeleteAppEndpoint import WebDeleteAppEndpoint
+from selfdroid.web.endpoints.UserLoginEndpoint import UserLoginEndpoint
+from selfdroid.web.endpoints.UserUploadAppEndpoint import UserUploadAppEndpoint
+from selfdroid.web.endpoints.UserAdminCreateAccountEndpoint import UserAdminCreateAccountEndpoint
+from selfdroid.web.endpoints.UserAdminManageAccountsEndpoint import UserAdminManageAccountsEndpoint
+from selfdroid.web.endpoints.AdminPendingSubmissionsEndpoint import AdminPendingSubmissionsEndpoint
+from selfdroid.web.endpoints.AdminApproveAppEndpoint import AdminApproveAppEndpoint
+from selfdroid.web.endpoints.AdminRejectAppEndpoint import AdminRejectAppEndpoint
+from selfdroid.web.endpoints.PaymentCreateInvoiceEndpoint import PaymentCreateInvoiceEndpoint
+from selfdroid.web.endpoints.PaymentCheckStatusEndpoint import PaymentCheckStatusEndpoint
+from selfdroid.web.endpoints.PaymentDownloadEndpoint import PaymentDownloadEndpoint
+from selfdroid.web.endpoints.PaymentQREndpoint import PaymentQREndpoint
 
 
 URL_PREFIX = "/web"
@@ -87,3 +98,63 @@ def fl_web_update_app(**url_params):
 @web_blueprint.route("/delete-app/<int:app_id>", methods=["POST"])
 def fl_web_delete_app(**url_params):
     return EndpointExecutor(WebDeleteAppEndpoint, url_params).execute()
+
+
+# User account login
+@web_blueprint.route("/user-login", methods=["GET", "POST"])
+def fl_web_user_login(**url_params):
+    return EndpointExecutor(UserLoginEndpoint, url_params).execute()
+
+
+# User app upload
+@web_blueprint.route("/upload-app", methods=["GET", "POST"])
+def fl_web_user_upload_app(**url_params):
+    return EndpointExecutor(UserUploadAppEndpoint, url_params).execute()
+
+
+# Admin: manage user accounts
+@web_blueprint.route("/admin/user-accounts", methods=["GET"])
+def fl_web_admin_user_accounts(**url_params):
+    return EndpointExecutor(UserAdminManageAccountsEndpoint, url_params).execute()
+
+
+@web_blueprint.route("/admin/create-account", methods=["POST"])
+def fl_web_admin_create_account(**url_params):
+    return EndpointExecutor(UserAdminCreateAccountEndpoint, url_params).execute()
+
+
+# Admin: pending submissions
+@web_blueprint.route("/admin/pending", methods=["GET"])
+def fl_web_admin_pending(**url_params):
+    return EndpointExecutor(AdminPendingSubmissionsEndpoint, url_params).execute()
+
+
+@web_blueprint.route("/admin/approve/<int:app_id>", methods=["POST"])
+def fl_web_admin_approve(**url_params):
+    return EndpointExecutor(AdminApproveAppEndpoint, url_params).execute()
+
+
+@web_blueprint.route("/admin/reject/<int:app_id>", methods=["POST"])
+def fl_web_admin_reject(**url_params):
+    return EndpointExecutor(AdminRejectAppEndpoint, url_params).execute()
+
+
+# Payment
+@web_blueprint.route("/payment/create-invoice/<int:app_id>", methods=["GET", "POST"])
+def fl_web_payment_create_invoice(**url_params):
+    return EndpointExecutor(PaymentCreateInvoiceEndpoint, url_params).execute()
+
+
+@web_blueprint.route("/payment/check-status/<int:sale_id>", methods=["GET"])
+def fl_web_payment_check_status(**url_params):
+    return EndpointExecutor(PaymentCheckStatusEndpoint, url_params).execute()
+
+
+@web_blueprint.route("/payment/download/<int:sale_id>", methods=["GET"])
+def fl_web_payment_download(**url_params):
+    return EndpointExecutor(PaymentDownloadEndpoint, url_params).execute()
+
+
+@web_blueprint.route("/payment/qr/<int:sale_id>", methods=["GET"])
+def fl_web_payment_qr(**url_params):
+    return EndpointExecutor(PaymentQREndpoint, url_params).execute()

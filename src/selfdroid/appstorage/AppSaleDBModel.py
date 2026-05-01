@@ -21,37 +21,42 @@
 
 
 import datetime
-from selfdroid.Constants import Constants
+from decimal import Decimal
 from selfdroid import db
 
 
-class AppMetadataDBModel(db.Model):
-    __tablename__ = "app_metadata"
+class AppSaleDBModel(db.Model):
+    __tablename__ = "app_sale"
     __table_args__ = {"sqlite_autoincrement": True}
 
-    # The IDs ARE NOT reusable!
     id = db.Column(db.Integer(), primary_key=True, nullable=False)
+    app_id = db.Column(db.Integer(), db.ForeignKey("app_metadata.id"), nullable=False)
+    buyer_user_id = db.Column(db.Integer(), db.ForeignKey("user_account.id"), nullable=False)
+    amount_usd = db.Column(db.Numeric(10, 2), nullable=False)
+    amount_xmr = db.Column(db.Numeric(20, 12), nullable=False)
+    currency = db.Column(db.String(3), default="usd", nullable=False)
+    payment_status = db.Column(db.String(16), default="pending", nullable=False)
+    invoice_id = db.Column(db.String(64), nullable=True)
+    download_issued_at = db.Column(db.DateTime(), nullable=True)
+    created_at = db.Column(db.DateTime(), default=datetime.datetime.utcnow, nullable=False)
 
-    app_name = db.Column(db.String(Constants.DB_APP_NAME_MAX_LENGTH), nullable=False)
-    package_name = db.Column(db.String(Constants.DB_PACKAGE_NAME_MAX_LENGTH), unique=True, nullable=False)
-    version_code = db.Column(db.Integer(), nullable=False)
-    version_name = db.Column(db.String(Constants.DB_VERSION_NAME_MAX_LENGTH), nullable=False)
+    def is_expired(self):
+        if self.download_issued_at:
+            expiry = self.download_issued_at + datetime.timedelta(hours=24)
+            return datetime.datetime.utcnow() > expiry
+        return False
 
-    min_api_level = db.Column(db.Integer(), nullable=False)
-    max_api_level = db.Column(db.Integer(), nullable=True)  # Most apps don't specify their max API level
-    apk_file_size = db.Column(db.Integer(), nullable=False)
-
-    # User upload & pricing
-    uploaded_by = db.Column(db.Integer(), db.ForeignKey("user_account.id"), nullable=True)
-    owner_username = db.Column(db.String(128), nullable=True)
-    price_usd = db.Column(db.Numeric(10, 2), nullable=True)
-    price_xmr = db.Column(db.Numeric(20, 12), nullable=True)
-    currency = db.Column(db.String(3), default="usd", nullable=True)
-    is_published = db.Column(db.Boolean(), default=False, nullable=False)
-    is_approved = db.Column(db.Boolean(), default=False, nullable=False)
-    approved_by = db.Column(db.Integer(), db.ForeignKey("user_account.id"), nullable=True)
-    approved_at = db.Column(db.DateTime(), nullable=True)
-    rejection_reason = db.Column(db.String(512), nullable=True)
-
-    added_datetime = db.Column(db.DateTime(), default=datetime.datetime.utcnow, nullable=False)
-    last_updated_datetime = db.Column(db.DateTime(), default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow, nullable=False)
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "app_id": self.app_id,
+            "buyer_user_id": self.buyer_user_id,
+            "amount_usd": str(self.amount_usd),
+            "amount_xmr": str(self.amount_xmr),
+            "currency": self.currency,
+            "payment_status": self.payment_status,
+            "invoice_id": self.invoice_id,
+            "download_issued_at": self.download_issued_at.strftime("%Y-%m-%d %H:%M:%S") if self.download_issued_at else None,
+            "created_at": self.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+            "is_expired": self.is_expired(),
+        }

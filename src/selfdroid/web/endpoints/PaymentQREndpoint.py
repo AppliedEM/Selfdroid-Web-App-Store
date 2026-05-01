@@ -21,28 +21,29 @@
 
 
 from typing import Dict, Any
+import io
 import flask
-from selfdroid.Constants import Constants
-from selfdroid.Settings import Settings
-from selfdroid.web.authenticator.WebAuthenticator import WebAuthenticator
-from selfdroid.web.forms.WebLogoutForm import WebLogoutForm
+import qrcode
+from selfdroid.web.endpointbases.WebAtLeastUserEndpointBase import WebAtLeastUserEndpointBase
+from selfdroid.EndpointWithAppIDBase import EndpointWithAppIDBase
+from selfdroid.appstorage.crud.AppSaleManager import AppSaleManager
 
 
-class WebHelpers:
-    @staticmethod
-    def generate_web_template_context() -> Dict[str, Any]:
-        return_dict = {
-            "Constants": Constants,
-            "Settings": Settings
-        }
+class PaymentQREndpoint(WebAtLeastUserEndpointBase, EndpointWithAppIDBase):
+    def handle_request(self) -> None:
+        sale_id = self.app_id_from_url_params
+        sale = AppSaleManager.get_by_id(sale_id)
+        if sale is None or not sale.invoice_id:
+            flask.abort(404)
 
-        authenticator = WebAuthenticator()
-        return_dict["has_at_least_user_privileges"] = authenticator.has_at_least_user_privileges()
-        return_dict["has_admin_privileges"] = authenticator.has_admin_privileges()
+        qr = qrcode.QRCode(version=1, box_size=10, border=4)
+        qr.add_data(f"monero:{sale.invoice_id}?amount={sale.amount_xmr}")
+        qr.make(fit=True)
 
-        if authenticator.has_at_least_user_privileges():
-            return_dict["logout_form"] = WebLogoutForm()
-            return_dict["user_account_id"] = flask.session.get("user_account_id", None)
-            return_dict["user_account_username"] = flask.session.get("user_account_username", None)
+        img = qr.make_image(fill_color="black", back_color="white")
 
-        return return_dict
+        img_io = io.BytesIO()
+        img.save(img_io, format="PNG")
+        img_io.seek(0)
+
+        return self.finish_request(flask.send_file(img_io, mimetype="image/png"))

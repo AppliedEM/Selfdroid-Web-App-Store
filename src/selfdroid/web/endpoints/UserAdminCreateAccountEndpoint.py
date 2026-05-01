@@ -22,27 +22,26 @@
 
 from typing import Dict, Any
 import flask
-from selfdroid.Constants import Constants
-from selfdroid.Settings import Settings
-from selfdroid.web.authenticator.WebAuthenticator import WebAuthenticator
-from selfdroid.web.forms.WebLogoutForm import WebLogoutForm
+from selfdroid.web.endpointbases.WebAdminEndpointBase import WebAdminEndpointBase
+from selfdroid.web.forms.UserAccountForms import UserAdminCreateAccountForm
+from selfdroid.appstorage.crud.UserAccountManager import UserAccountManager
 
 
-class WebHelpers:
-    @staticmethod
-    def generate_web_template_context() -> Dict[str, Any]:
-        return_dict = {
-            "Constants": Constants,
-            "Settings": Settings
-        }
+class UserAdminCreateAccountEndpoint(WebAdminEndpointBase):
+    def handle_request(self) -> None:
+        create_form = UserAdminCreateAccountForm()
+        self.message_collector.register_form("admin_create_account", create_form)
 
-        authenticator = WebAuthenticator()
-        return_dict["has_at_least_user_privileges"] = authenticator.has_at_least_user_privileges()
-        return_dict["has_admin_privileges"] = authenticator.has_admin_privileges()
+        if create_form.validate_on_submit():
+            try:
+                user_id = flask.session.get("user_account_id", 1)
+                UserAccountManager.create_account(
+                    username=create_form.username.data,
+                    password=create_form.password.data,
+                    created_by_id=user_id,
+                )
+                self.message_collector.add_success_message(f"Account '{create_form.username.data}' created successfully!")
+            except ValueError as e:
+                self.message_collector.add_error_message(str(e))
 
-        if authenticator.has_at_least_user_privileges():
-            return_dict["logout_form"] = WebLogoutForm()
-            return_dict["user_account_id"] = flask.session.get("user_account_id", None)
-            return_dict["user_account_username"] = flask.session.get("user_account_username", None)
-
-        return return_dict
+        self.redirect_and_finish_request("web_blueprint.fl_web_admin_user_accounts")

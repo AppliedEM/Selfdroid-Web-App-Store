@@ -23,41 +23,30 @@
 from typing import Dict, Any
 import flask
 from selfdroid.Constants import Constants
-from selfdroid.EndpointWithAppIDBase import EndpointWithAppIDBase
-from selfdroid.appstorage.AppMetadataDBModel import AppMetadataDBModel
 from selfdroid.appstorage.AppStorageHelpers import AppStorageHelpers
-from selfdroid.appstorage.crud.AppGetter import AppGetter
-from selfdroid.appstorage.crud.AppSaleManager import AppSaleManager
 from selfdroid.web.endpointbases.WebAtLeastUserEndpointBase import WebAtLeastUserEndpointBase
+from selfdroid.EndpointWithAppIDBase import EndpointWithAppIDBase
+from selfdroid.appstorage.crud.AppSaleManager import AppSaleManager
+from selfdroid.appstorage.AppMetadataDBModel import AppMetadataDBModel
 
 
-class WebDownloadAPKEndpoint(WebAtLeastUserEndpointBase, EndpointWithAppIDBase):
-    def __init__(self, url_params: Dict[str, Any]):
-        WebAtLeastUserEndpointBase.__init__(self, url_params)
-        EndpointWithAppIDBase.__init__(self, url_params)
-
+class PaymentDownloadEndpoint(WebAtLeastUserEndpointBase, EndpointWithAppIDBase):
     def handle_request(self) -> None:
-        with AppStorageHelpers.get_app_storage_lock():
-            app = AppGetter().get_db_model_or_404_while_locked(self.app_id_from_url_params)
+        sale_id = self.app_id_from_url_params
+        sale = AppSaleManager.get_by_id(sale_id)
 
-        if not app.is_published:
+        if sale is None or sale.payment_status != "confirmed":
+            self.message_collector.add_error_message("Payment not confirmed. Please complete the payment first.")
+            self.redirect_and_finish_request("web_blueprint.fl_web_user_upload")
+            return
+
+        app_id = sale.app_id
+        app = AppMetadataDBModel.query.get(app_id)
+        if app is None:
             flask.abort(404)
 
-        if not app.is_free:
-            buyer_user_id = flask.session.get("user_account_id")
-            if buyer_user_id:
-                confirmed_sale = AppSaleManager.get_by_app_and_user(self.app_id_from_url_params, buyer_user_id)
-                if confirmed_sale:
-                    pass  # User has confirmed sale, allow download
-                else:
-                    self.message_collector.add_error_message("Payment required. Please complete the payment first.")
-                    self.redirect_and_finish_request("web_blueprint.fl_web_payment_create_invoice", app_id=self.app_id_from_url_params)
-                    return
-            else:
-                self.redirect_and_finish_request("web_blueprint.fl_web_login")
-                return
-
+        apk_filename = AppStorageHelpers.get_apk_filename_by_app_id(app_id)
         self.send_file_and_finish_request(Constants.APKS_DIRECTORY,
-                                          AppStorageHelpers.get_apk_filename_by_app_id(self.app_id_from_url_params),
+                                          apk_filename,
                                           f"{app.app_name}.apk",
                                           as_attachment=True)

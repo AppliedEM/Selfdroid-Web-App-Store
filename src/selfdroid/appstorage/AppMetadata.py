@@ -21,7 +21,7 @@
 
 
 from __future__ import annotations
-from typing import Optional, Dict, Union
+from typing import Optional, Dict, Union, List
 import datetime
 import dateutil.tz
 from selfdroid.Settings import Settings
@@ -49,6 +49,18 @@ class AppMetadata:
 
         self.apk_file_size: int = db_model.apk_file_size
 
+        # User upload & pricing
+        self.uploaded_by: Optional[int] = db_model.uploaded_by
+        self.owner_username: Optional[str] = db_model.owner_username
+        self.price_usd: Optional[float] = float(db_model.price_usd) if db_model.price_usd is not None else None
+        self.price_xmr: Optional[float] = float(db_model.price_xmr) if db_model.price_xmr is not None else None
+        self.currency: Optional[str] = db_model.currency
+        self.is_published: bool = db_model.is_published
+        self.is_approved: bool = db_model.is_approved
+        self.approved_by: Optional[int] = db_model.approved_by
+        self.approved_at: Optional[datetime.datetime] = self._add_utc_timezone_to_naive_datetime_object(db_model.approved_at) if db_model.approved_at else None
+        self.rejection_reason: Optional[str] = db_model.rejection_reason
+
         self.added_datetime: datetime.datetime = self._add_utc_timezone_to_naive_datetime_object(db_model.added_datetime)
         self.last_updated_datetime: datetime.datetime = self._add_utc_timezone_to_naive_datetime_object(db_model.last_updated_datetime)
 
@@ -68,7 +80,11 @@ class AppMetadata:
 
         return datetime_object.astimezone(tz=display_timezone)
 
-    def to_api_dict(self) -> Dict[str, Union[str, int]]:
+    @property
+    def is_free(self) -> bool:
+        return self.price_usd is None or float(self.price_usd) == 0
+
+    def to_api_dict(self) -> Dict[str, Union[str, int, float, bool, None]]:
         return {
             "id": self.id,
 
@@ -83,7 +99,18 @@ class AppMetadata:
             "apk_file_size": self.apk_file_size,
 
             "added_timestamp": int(self.added_datetime.timestamp()),
-            "last_updated_timestamp": int(self.last_updated_datetime.timestamp())
+            "last_updated_timestamp": int(self.last_updated_datetime.timestamp()),
+
+            # User upload & pricing
+            "uploaded_by": self.uploaded_by,
+            "owner_username": self.owner_username,
+            "owner_user_id": self.uploaded_by,
+            "price_usd": self.price_usd,
+            "price_xmr": self.price_xmr,
+            "currency": self.currency,
+            "is_published": self.is_published,
+            "is_approved": self.is_approved,
+            "is_free": self.is_free,
         }
 
     def get_apk_path(self) -> str:

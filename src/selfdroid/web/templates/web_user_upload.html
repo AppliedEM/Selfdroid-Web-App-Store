@@ -1,0 +1,71 @@
+{% extends '_web_base.html' %}
+
+
+{#
+SPDX-License-Identifier: BSD-3-Clause
+
+Copyright (c) 2021 Vít Labuda. All rights reserved.
+#}
+
+
+{% block block_title %}
+<title>Upload App | {{ Settings.INSTANCE_NAME }}</title>
+{% endblock %}
+
+{% block block_jumbotron %}
+<div class="container-fluid bg-light text-center p-3">
+    <h1 class="display-5 fw-bold py-5">Upload a New App</h1>
+</div>
+{% endblock %}
+
+{% block block_content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6 my-3">
+            <div class="card">
+                <div class="card-body">
+                    <form action="{{ url_for('web_blueprint.fl_web_user_upload_app') }}" method="POST" enctype="multipart/form-data">
+                        {{ upload_form.hidden_tag() }}
+
+                        <div class="form-group mb-3">
+                            {{ upload_form.apk_file.label(class_='form-label') }}
+                            {{ upload_form.apk_file(class_='form-control') }}
+                            <small class="form-text text-muted">Upload a valid .apk file</small>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            {{ upload_form.price.label(class_='form-label') }}
+                            {{ upload_form.price(class_='form-control', placeholder='Leave empty for free') }}
+                            <small class="form-text text-muted">If price is empty, the app will be free for everyone to download.</small>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            {{ upload_form.currency.label(class_='form-label') }}
+                            <div>
+                                {% for radio_field in upload_form.currency %}
+                                    {{ radio_field(class_='btn-check') }}
+                                    {{ radio_field.label(class_='btn btn-outline-secondary me-2') }}
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <br>
+                        <div class="form-group">
+                            {{ upload_form.submit(class_='btn btn-success w-100') }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <br>
+
+            <div class="text-center">
+                <a class="btn btn-secondary" href="{{ url_for('web_blueprint.fl_web_index') }}">
+                    <span class="bi bi-arrow-left"></span>
+                    <span class="ms-1">Back to app list</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

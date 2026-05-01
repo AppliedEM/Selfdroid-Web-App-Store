@@ -20,29 +20,32 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-from typing import Dict, Any
+from selfdroid.UserReadableException import UserReadableException
+from selfdroid.web.endpointbases.WebPublicOnlyEndpointBase import WebPublicOnlyEndpointBase
+from selfdroid.web.forms.UserAccountForms import UserAccountLoginForm
+from selfdroid.appstorage.UserAccountDBModel import UserAccountDBModel
+from selfdroid.appstorage.crud.UserAccountManager import UserAccountManager
 import flask
-from selfdroid.Constants import Constants
-from selfdroid.Settings import Settings
-from selfdroid.web.authenticator.WebAuthenticator import WebAuthenticator
-from selfdroid.web.forms.WebLogoutForm import WebLogoutForm
 
 
-class WebHelpers:
-    @staticmethod
-    def generate_web_template_context() -> Dict[str, Any]:
-        return_dict = {
-            "Constants": Constants,
-            "Settings": Settings
-        }
+class UserLoginEndpoint(WebPublicOnlyEndpointBase):
+    def handle_request(self) -> None:
+        login_form = UserAccountLoginForm()
+        self.message_collector.register_form("user_login", login_form)
 
-        authenticator = WebAuthenticator()
-        return_dict["has_at_least_user_privileges"] = authenticator.has_at_least_user_privileges()
-        return_dict["has_admin_privileges"] = authenticator.has_admin_privileges()
+        if login_form.validate_on_submit():
+            self._perform_login(login_form)
+            self.redirect_and_finish_request("web_blueprint.fl_web_index")
 
-        if authenticator.has_at_least_user_privileges():
-            return_dict["logout_form"] = WebLogoutForm()
-            return_dict["user_account_id"] = flask.session.get("user_account_id", None)
-            return_dict["user_account_username"] = flask.session.get("user_account_username", None)
+        self.render_template_and_finish_request("web_user_login.html", login_form=login_form)
 
-        return return_dict
+    def _perform_login(self, login_form: UserAccountLoginForm) -> None:
+        username = login_form.username.data
+        password = login_form.password.data
+
+        account = UserAccountManager.authenticate(username, password)
+        if account is None:
+            self.message_collector.add_error_message("Invalid username or password!")
+            return
+
+        self.authenticator.log_in_as_user_account(account.id, account.username)

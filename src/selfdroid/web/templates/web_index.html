@@ -68,14 +68,21 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
             <h2>All apps</h2>
         </div>
 
-        {% if add_app_form %}
         <div class="col-md-6 my-1 text-end">
+            {% if has_at_least_user_privileges and Settings.USER_UPLOAD_ENABLED %}
+            <a class="btn btn-success me-1" href="{{ url_for('web_blueprint.fl_web_user_upload_app') }}">
+                <span class="bi bi-plus-square"></span>
+                <span class="ms-1">Upload App</span>
+            </a>
+            {% endif %}
+
+            {% if add_app_form %}
             <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addAppModal">
                 <span class="bi bi-plus-square"></span>
                 <span class="ms-1">Add a new app</span>
             </button>
+            {% endif %}
         </div>
-        {% endif %}
     </div>
 
     <div class="row my-3">
@@ -88,6 +95,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                                 <th>#</th>
                                 <th>Icon</th>
                                 <th>App name</th>
+                                <th>Price</th>
+                                <th>Owner</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -104,6 +113,20 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
                                     <td>
                                         {{ app_metadata.app_name }}
+                                    </td>
+
+                                    <td>
+                                        {% if app_metadata.is_free %}
+                                            <span class="badge bg-success">Free</span>
+                                        {% elif app_metadata.currency == "xmr" %}
+                                            <span class="badge bg-primary">{{ "%.6f"|format(app_metadata.price_xmr or 0) }} XMR</span>
+                                        {% else %}
+                                            <span class="badge bg-primary">${{ "%.2f"|format(app_metadata.price_usd or 0) }}</span>
+                                        {% endif %}
+                                    </td>
+
+                                    <td>
+                                        {{ app_metadata.owner_username or 'N/A' }}
                                     </td>
 
                                     <td class="selfdroid-shrink">

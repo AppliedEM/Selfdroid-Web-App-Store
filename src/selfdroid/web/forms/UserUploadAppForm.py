@@ -20,29 +20,18 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-from typing import Dict, Any
-import flask
-from selfdroid.Constants import Constants
-from selfdroid.Settings import Settings
-from selfdroid.web.authenticator.WebAuthenticator import WebAuthenticator
-from selfdroid.web.forms.WebLogoutForm import WebLogoutForm
+import flask_wtf
+import wtforms
 
 
-class WebHelpers:
-    @staticmethod
-    def generate_web_template_context() -> Dict[str, Any]:
-        return_dict = {
-            "Constants": Constants,
-            "Settings": Settings
-        }
-
-        authenticator = WebAuthenticator()
-        return_dict["has_at_least_user_privileges"] = authenticator.has_at_least_user_privileges()
-        return_dict["has_admin_privileges"] = authenticator.has_admin_privileges()
-
-        if authenticator.has_at_least_user_privileges():
-            return_dict["logout_form"] = WebLogoutForm()
-            return_dict["user_account_id"] = flask.session.get("user_account_id", None)
-            return_dict["user_account_username"] = flask.session.get("user_account_username", None)
-
-        return return_dict
+class UserUploadAppForm(flask_wtf.FlaskForm):
+    apk_file = wtforms.FileField("Please select the APK file:",
+                                  validators=[flask_wtf.file.FileRequired(), flask_wtf.file.FileAllowed(["apk"])])
+    price = wtforms.DecimalField("Price (USD)",
+                                 places=2,
+                                 render_kw={"placeholder": "Leave empty for free"},
+                                 validators=[wtforms.validators.Optional()])
+    currency = wtforms.RadioField("Currency",
+                                  choices=[("usd", "USD"), ("xmr", "XMR")],
+                                  default="usd")
+    submit = wtforms.SubmitField("Upload")

@@ -22,27 +22,12 @@
 
 from typing import Dict, Any
 import flask
-from selfdroid.Constants import Constants
-from selfdroid.Settings import Settings
-from selfdroid.web.authenticator.WebAuthenticator import WebAuthenticator
-from selfdroid.web.forms.WebLogoutForm import WebLogoutForm
+from selfdroid.web.endpointbases.WebAdminEndpointBase import WebAdminEndpointBase
+from selfdroid.appstorage.AppMetadataDBModel import AppMetadataDBModel
+from selfdroid.appstorage.crud.AppGetter import AppGetter
 
 
-class WebHelpers:
-    @staticmethod
-    def generate_web_template_context() -> Dict[str, Any]:
-        return_dict = {
-            "Constants": Constants,
-            "Settings": Settings
-        }
-
-        authenticator = WebAuthenticator()
-        return_dict["has_at_least_user_privileges"] = authenticator.has_at_least_user_privileges()
-        return_dict["has_admin_privileges"] = authenticator.has_admin_privileges()
-
-        if authenticator.has_at_least_user_privileges():
-            return_dict["logout_form"] = WebLogoutForm()
-            return_dict["user_account_id"] = flask.session.get("user_account_id", None)
-            return_dict["user_account_username"] = flask.session.get("user_account_username", None)
-
-        return return_dict
+class AdminPendingSubmissionsEndpoint(WebAdminEndpointBase):
+    def handle_request(self) -> None:
+        pending_apps = AppMetadataDBModel.query.filter_by(is_approved=False).order_by(AppMetadataDBModel.added_datetime.desc()).all()
+        self.render_template_and_finish_request("admin_pending_submissions.html", pending_apps=pending_apps)

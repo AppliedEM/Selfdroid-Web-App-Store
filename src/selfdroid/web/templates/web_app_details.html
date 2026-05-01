@@ -154,6 +154,26 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                         </tr>
 
                         <tr>
+                            <th class="selfdroid-shrink-md text-end" scope="row">Owner:</th>
+                            <td colspan="3">{{ app_metadata.owner_username or 'N/A' }}</td>
+                        </tr>
+
+                        <tr>
+                            <th class="selfdroid-shrink-md text-end" scope="row">Price:</th>
+                            <td colspan="3">
+                                {% if app_metadata.is_free %}
+                                    <span class="badge bg-success">Free</span>
+                                {% elif app_metadata.currency == "xmr" %}
+                                    <span class="badge bg-primary">{{ "%.6f"|format(app_metadata.price_xmr or 0) }} XMR</span>
+                                    <small class="text-muted"> (approx. ${{ "%.2f"|format(app_metadata.price_usd or 0) }} USD)</small>
+                                {% else %}
+                                    <span class="badge bg-primary">${{ "%.2f"|format(app_metadata.price_usd or 0) }}</span>
+                                    <small class="text-muted"> (approx. {{ "%.6f"|format(app_metadata.price_xmr or 0) }} XMR)</small>
+                                {% endif %}
+                            </td>
+                        </tr>
+
+                        <tr>
                             <th class="selfdroid-shrink-md text-end" scope="row">Added:</th>
                             <td>{{ app_metadata.added_datetime_timezoned|tf_format_datetime }}</td>
                             <th class="selfdroid-shrink-md text-end" scope="row">Last updated:</th>
@@ -173,12 +193,21 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     </div>
 
     <div class="row my-3">
+        {% if app_metadata.is_free %}
         <div class="col-md-4 mx-auto my-1">
             <a class="btn btn-dark w-100" href="{{ url_for('web_blueprint.fl_web_download_apk', app_id=app_metadata.id) }}" role="button">
                 <span class="bi bi-download"></span>
                 <span class="ms-1">Download</span>
             </a>
         </div>
+        {% else %}
+        <div class="col-md-4 mx-auto my-1">
+            <a class="btn btn-warning w-100" href="{{ url_for('web_blueprint.fl_web_payment_create_invoice', app_id=app_metadata.id) }}" role="button">
+                <span class="bi bi-cart"></span>
+                <span class="ms-1">Download ({{ "%.6f"|format(app_metadata.price_xmr or 0) }} XMR)</span>
+            </a>
+        </div>
+        {% endif %}
 
         {% if update_app_form %}
         <div class="col-md-4 mx-auto my-1">

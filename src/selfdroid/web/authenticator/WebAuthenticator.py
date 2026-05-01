@@ -91,3 +91,13 @@ class WebAuthenticator(AuthenticatorBase):
         flask.session.pop(WebAuthenticator._SESSION_KEY_HAS_USER_PRIVILEGES, default=None)
         flask.session.pop(WebAuthenticator._SESSION_KEY_HAS_ADMIN_PRIVILEGES, default=None)
         flask.session.pop(WebAuthenticator._SESSION_KEY_LOGIN_TIMESTAMP, default=None)
+        flask.session.pop("user_account_id", default=None)
+        flask.session.pop("user_account_username", default=None)
+
+    def log_in_as_user_account(self, user_account_id: int, username: str) -> None:
+        if self.has_at_least_user_privileges():
+            raise WebAuthenticatorLoginException("You're already logged in!")
+
+        self._add_session_variables_on_login(has_admin_privileges=False)
+        flask.session["user_account_id"] = user_account_id
+        flask.session["user_account_username"] = username

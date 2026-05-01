@@ -1,0 +1,110 @@
+{% extends '_web_base.html' %}
+
+
+{#
+SPDX-License-Identifier: BSD-3-Clause
+
+Copyright (c) 2021 Vít Labuda. All rights reserved.
+#}
+
+
+{% block block_title %}
+<title>Manage User Accounts | {{ Settings.INSTANCE_NAME }}</title>
+{% endblock %}
+
+{% block block_content %}
+<div class="container">
+    <div class="row my-3">
+        <div class="col-md-6 my-1">
+            <h2>User Accounts</h2>
+        </div>
+        <div class="col-md-6 my-1 text-end">
+            <a class="btn btn-success" href="{{ url_for('web_blueprint.fl_web_admin_create_account') }}">
+                <span class="bi bi-plus-square"></span>
+                <span class="ms-1">Create Account</span>
+            </a>
+        </div>
+    </div>
+
+    <div class="row my-3">
+        <div class="col-md-12 my-1">
+            {% if all_accounts %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle fs-5">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Username</th>
+                                <th>Status</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for account in all_accounts %}
+                                <tr>
+                                    <td class="selfdroid-shrink">{{ loop.index }}.</td>
+                                    <td>{{ account.username }}</td>
+                                    <td>
+                                        {% if account.is_active %}
+                                            <span class="badge bg-success">Active</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">Deactivated</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ account.created_at|tf_format_datetime }}</td>
+                                    <td class="selfdroid-shrink">
+                                        {% if account.is_active %}
+                                            <a class="btn btn-sm btn-warning" href="{{ url_for('web_blueprint.fl_web_admin_manage_accounts', action='deactivate', account_id=account.id) }}" role="button" onclick="return confirm('Deactivate this account?')">
+                                                <span class="bi bi-person-x"></span>
+                                            </a>
+                                        {% else %}
+                                            <a class="btn btn-sm btn-success" href="{{ url_for('web_blueprint.fl_web_admin_manage_accounts', action='activate', account_id=account.id) }}" role="button" onclick="return confirm('Activate this account?')">
+                                                <span class="bi bi-person-check"></span>
+                                            </a>
+                                        {% endif %}
+                                        <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#resetPasswordModal{{ account.id }}">
+                                            <span class="bi bi-key"></span>
+                                        </button>
+                                        <a class="btn btn-sm btn-danger" href="{{ url_for('web_blueprint.fl_web_admin_manage_accounts', action='delete', account_id=account.id) }}" role="button" onclick="return confirm('Delete this account and all associated apps? This cannot be undone!')">
+                                            <span class="bi bi-trash"></span>
+                                        </a>
+
+                                        <!-- Reset Password Modal -->
+                                        <div class="modal fade" tabindex="-1" id="resetPasswordModal{{ account.id }}" aria-hidden="true">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <form action="{{ url_for('web_blueprint.fl_web_admin_manage_accounts', action='reset_password', account_id=account.id) }}" method="POST">
+                                                        <div class="modal-header">
+                                                            <h5 class="modal-title">Reset Password for {{ account.username }}</h5>
+                                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                        </div>
+                                                        <div class="modal-body">
+                                                            <div class="form-group">
+                                                                <label class="form-label">New Password</label>
+                                                                <input type="password" name="new_password" class="form-control" required minlength="8">
+                                                            </div>
+                                                        </div>
+                                                        <div class="modal-footer">
+                                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                            <button type="submit" class="btn btn-primary">Reset Password</button>
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="my-4 text-center">
+                    <i>No user accounts have been created yet.</i>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

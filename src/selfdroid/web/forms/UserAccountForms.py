@@ -20,29 +20,21 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-from typing import Dict, Any
-import flask
-from selfdroid.Constants import Constants
-from selfdroid.Settings import Settings
-from selfdroid.web.authenticator.WebAuthenticator import WebAuthenticator
-from selfdroid.web.forms.WebLogoutForm import WebLogoutForm
+import flask_wtf
+import wtforms
 
 
-class WebHelpers:
-    @staticmethod
-    def generate_web_template_context() -> Dict[str, Any]:
-        return_dict = {
-            "Constants": Constants,
-            "Settings": Settings
-        }
+class UserAdminCreateAccountForm(flask_wtf.FlaskForm):
+    username = wtforms.StringField("Username",
+                                   validators=[wtforms.validators.DataRequired(), wtforms.validators.Length(1, 128)])
+    password = wtforms.PasswordField("Password",
+                                     validators=[wtforms.validators.DataRequired(), wtforms.validators.Length(8, 72)])
+    submit = wtforms.SubmitField("Create Account")
 
-        authenticator = WebAuthenticator()
-        return_dict["has_at_least_user_privileges"] = authenticator.has_at_least_user_privileges()
-        return_dict["has_admin_privileges"] = authenticator.has_admin_privileges()
 
-        if authenticator.has_at_least_user_privileges():
-            return_dict["logout_form"] = WebLogoutForm()
-            return_dict["user_account_id"] = flask.session.get("user_account_id", None)
-            return_dict["user_account_username"] = flask.session.get("user_account_username", None)
-
-        return return_dict
+class UserAccountLoginForm(flask_wtf.FlaskForm):
+    username = wtforms.StringField("Username",
+                                   validators=[wtforms.validators.DataRequired(), wtforms.validators.Length(1, 128)])
+    password = wtforms.PasswordField("Password",
+                                     validators=[wtforms.validators.DataRequired()])
+    submit = wtforms.SubmitField("Log in")

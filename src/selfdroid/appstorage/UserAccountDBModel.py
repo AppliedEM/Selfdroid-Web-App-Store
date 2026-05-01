@@ -21,37 +21,16 @@
 
 
 import datetime
-from selfdroid.Constants import Constants
 from selfdroid import db
 
 
-class AppMetadataDBModel(db.Model):
-    __tablename__ = "app_metadata"
+class UserAccountDBModel(db.Model):
+    __tablename__ = "user_account"
     __table_args__ = {"sqlite_autoincrement": True}
 
-    # The IDs ARE NOT reusable!
     id = db.Column(db.Integer(), primary_key=True, nullable=False)
-
-    app_name = db.Column(db.String(Constants.DB_APP_NAME_MAX_LENGTH), nullable=False)
-    package_name = db.Column(db.String(Constants.DB_PACKAGE_NAME_MAX_LENGTH), unique=True, nullable=False)
-    version_code = db.Column(db.Integer(), nullable=False)
-    version_name = db.Column(db.String(Constants.DB_VERSION_NAME_MAX_LENGTH), nullable=False)
-
-    min_api_level = db.Column(db.Integer(), nullable=False)
-    max_api_level = db.Column(db.Integer(), nullable=True)  # Most apps don't specify their max API level
-    apk_file_size = db.Column(db.Integer(), nullable=False)
-
-    # User upload & pricing
-    uploaded_by = db.Column(db.Integer(), db.ForeignKey("user_account.id"), nullable=True)
-    owner_username = db.Column(db.String(128), nullable=True)
-    price_usd = db.Column(db.Numeric(10, 2), nullable=True)
-    price_xmr = db.Column(db.Numeric(20, 12), nullable=True)
-    currency = db.Column(db.String(3), default="usd", nullable=True)
-    is_published = db.Column(db.Boolean(), default=False, nullable=False)
-    is_approved = db.Column(db.Boolean(), default=False, nullable=False)
-    approved_by = db.Column(db.Integer(), db.ForeignKey("user_account.id"), nullable=True)
-    approved_at = db.Column(db.DateTime(), nullable=True)
-    rejection_reason = db.Column(db.String(512), nullable=True)
-
-    added_datetime = db.Column(db.DateTime(), default=datetime.datetime.utcnow, nullable=False)
-    last_updated_datetime = db.Column(db.DateTime(), default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow, nullable=False)
+    username = db.Column(db.String(128), unique=True, nullable=False)
+    password_hash = db.Column(db.String(256), nullable=False)
+    is_active = db.Column(db.Boolean(), default=True, nullable=False)
+    created_at = db.Column(db.DateTime(), default=datetime.datetime.utcnow, nullable=False)
+    created_by = db.Column(db.Integer(), db.ForeignKey("user_account.id"), nullable=False)

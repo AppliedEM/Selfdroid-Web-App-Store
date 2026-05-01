@@ -1,0 +1,113 @@
+{% extends '_web_base.html' %}
+
+
+{#
+SPDX-License-Identifier: BSD-3-Clause
+
+Copyright (c) 2021 Vít Labuda. All rights reserved.
+#}
+
+
+{% block block_additional_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}" type="text/css" nonce="{{ csp_nonce() }}">
+{% endblock %}
+
+{% block block_title %}
+<title>Payment | {{ Settings.INSTANCE_NAME }}</title>
+{% endblock %}
+
+{% block block_jumbotron %}
+<div class="container-fluid bg-light text-center p-3">
+    <h1 class="display-5 fw-bold py-5">Complete Your Payment</h1>
+</div>
+{% endblock %}
+
+{% block block_content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6 my-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h4 class="card-title">{{ app.app_name }}</h4>
+                    <p class="card-text">
+                        <strong>Price:</strong>
+                        {{ "%.6f"|format(amount_xmr) }} XMR
+                        <br>
+                        <small class="text-muted">(${"%.2f"|format(amount_usd)} USD approx.)</small>
+                    </p>
+
+                    <hr>
+
+                    <div class="mb-3">
+                        <p class="fw-bold">Scan the QR code below with your Monero wallet:</p>
+                        <img src="{{ url_for('web_blueprint.fl_web_payment_qr', sale_id=sale.id) }}" alt="Payment QR Code" class="img-fluid" style="max-width: 256px;">
+                    </div>
+
+                    <hr>
+
+                    <div class="mb-3">
+                        <p class="fw-bold mb-1">Send payment to:</p>
+                        <code class="d-block p-2 bg-light word-break">{{ subaddress }}</code>
+                    </div>
+
+                    <hr>
+
+                    <div class="my-3">
+                        <p class="text-muted">
+                            <small>Payment will be confirmed automatically after 2 confirmations.<br>
+                            This page will auto-refresh every 10 seconds to check for payment.</small>
+                        </p>
+                    </div>
+
+                    <div id="payment-status" class="my-3">
+                        <span class="spinner-border text-primary" role="status"></span>
+                        <span class="ms-2">Checking payment status...</span>
+                    </div>
+                </div>
+            </div>
+
+            <br>
+
+            <div class="text-center">
+                <a class="btn btn-secondary" href="{{ url_for('web_blueprint.fl_web_app_details', app_id=app.id) }}">
+                    <span class="bi bi-arrow-left"></span>
+                    <span class="ms-1">Back</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block block_additional_js %}
+<script nonce="{{ csp_nonce() }}">
+    const SALE_ID = {{ sale.id }};
+    const CHECK_INTERVAL = 10000; // 10 seconds
+
+    function checkPaymentStatus() {
+        fetch(`/web/payment/check-status/${SALE_ID}`)
+            .then(response => response.json())
+            .then(data => {
+                const statusEl = document.getElementById('payment-status');
+
+                if (data.status === 'confirmed') {
+                    statusEl.innerHTML = '<span class="text-success fw-bold">Payment confirmed! Redirecting to download...</span>';
+                    window.location.href = `/web/payment/download/${SALE_ID}`;
+                } else if (data.status === 'expired') {
+                    statusEl.innerHTML = '<span class="text-danger fw-bold">Payment expired. Please try again.</span>';
+                } else {
+                    const confirmations = data.confirmations || 0;
+                    const required = data.required || 2;
+                    statusEl.innerHTML = `<span class="text-warning">Waiting for payment... (${confirmations}/${required} confirmations)</span>`;
+                }
+            })
+            .catch(error => {
+                console.error('Payment check failed:', error);
+            });
+    }
+
+    // Start polling
+    checkPaymentStatus();
+    setInterval(checkPaymentStatus, CHECK_INTERVAL);
+</script>
+{% endblock %}

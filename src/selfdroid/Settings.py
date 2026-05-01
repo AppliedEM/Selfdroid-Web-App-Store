@@ -77,3 +77,27 @@ class Settings:
         # Default dev password: admin123
         import bcrypt
         return bcrypt.hashpw(b"admin123", bcrypt.gensalt()).decode()
+
+    # User upload settings
+    USER_UPLOAD_ENABLED: bool = os.environ.get("SELFDROID_USER_UPLOAD_ENABLED", "true").lower() in ("true", "1", "yes")
+    USER_UPLOAD_REQUIRES_APPROVAL: bool = os.environ.get("SELFDROID_USER_UPLOAD_REQUIRES_APPROVAL", "true").lower() in ("true", "1", "yes")
+
+    @staticmethod
+    def get_min_price_usd():
+        import os
+        env_val = os.environ.get("SELFDROID_MIN_PRICE_USD")
+        if env_val:
+            from decimal import Decimal
+            return Decimal(env_val)
+        return Decimal("0.01")
+
+    @staticmethod
+    def get_min_price_xmr():
+        import os
+        env_val = os.environ.get("SELFDROID_MIN_PRICE_XMR")
+        if env_val:
+            from decimal import Decimal
+            return Decimal(env_val)
+        return Decimal("0.001")
+
+    DOWNLOAD_EXPIRY_HOURS: int = int(os.environ.get("SELFDROID_DOWNLOAD_EXPIRY_HOURS", "24"))
