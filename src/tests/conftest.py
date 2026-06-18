@@ -170,3 +170,49 @@ def test_app_metadata(db_session):
     db_session.add(app_meta)
     db_session.commit()
     return app_meta
+
+
+# ============================================================================
+# Payment Gateway Test Fixtures
+# ============================================================================
+
+@pytest.fixture
+def mock_gateway():
+    """Create a mocked MoneroGateway instance for unit testing.
+
+    This fixture patches the gateway singleton to avoid needing actual monero-wallet-rpc.
+    Use it in tests that need gateway methods without real RPC calls.
+    """
+    from unittest.mock import patch, MagicMock
+    from selfdroid.payments.gateway import MoneroPaymentError, gateway as original_gateway
+
+    mock = MagicMock(spec=original_gateway.__class__)
+
+    with patch.object(original_gateway.__class__, '__init__', return_value=None):
+        # Copy cache state from original
+        mock._rate_cache = None
+        mock._rate_cache_time = 0
+
+    yield mock
+
+
+@pytest.fixture
+def mock_gateway_with_balance(mock_gateway):
+    """Mocked gateway that returns a test balance."""
+    mock_gateway.get_balance.return_value = Decimal("1.5")
+    return mock_gateway
+
+
+@pytest.fixture
+def mock_gateway_with_exchange_rate(mock_gateway):
+    """Mocked gateway with cached exchange rate (avoids CoinGecko calls)."""
+    mock_gateway._rate_cache = Decimal("200.00")
+    mock_gateway._rate_cache_time = 0
+    return mock_gateway
+
+
+@pytest.fixture
+def mock_monero_payment_error():
+    """Provide MoneroPaymentError class for direct testing."""
+    from selfdroid.payments.gateway import MoneroPaymentError
+    return MoneroPaymentError

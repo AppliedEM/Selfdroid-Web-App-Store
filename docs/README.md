@@ -32,6 +32,20 @@ It's intended primarily for those who want to conveniently distribute their own 
 
 
 
+## Documentation / Buildouts
+
+| Document | Description |
+|----------|-------------|
+| [monero_payments_buildout.md](monero_payments_buildout.md) | Monero payment module implementation plan |
+| [testnet_buildout.md](testnet_buildout.md) | Testnet payment support — feasibility analysis and implementation guide |
+| [user_buildout.md](user_buildout.md) | User app upload feature buildout plan |
+| [user_buildout_synopsis.md](user_buildout_synopsis.md) | Synopsis of user buildout changes |
+| [user_buildout_testing.md](user_buildout_testing.md) | Recommended tests for user buildout |
+| [monero_payments_buildout.md](docs/monero_payments_buildout.md) | Payment module synopsis |
+| [buildout_synopsis.md](buildout_synopsis.md) | Payment module synopsis |
+| [future_development.md](future_development.md) | Planned features and roadmap |
+| [unit_test_buildout.md](unit_test_buildout.md) | Unit testing infrastructure plan |
+
 ## Deployment & usage
 
 ### 1. Requirements
