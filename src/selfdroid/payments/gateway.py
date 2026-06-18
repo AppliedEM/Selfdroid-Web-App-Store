@@ -8,6 +8,7 @@ Handles:
 """
 
 import time
+import logging
 import requests
 from decimal import Decimal, ROUND_DOWN
 from selfdroid.payments.settings import (
@@ -17,7 +18,10 @@ from selfdroid.payments.settings import (
     COINGECKO_API_URL,
     EXCHANGE_RATE_CACHE_TTL,
     XMR_DECIMAL_PLACES,
+    MONERO_NETWORK,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class MoneroPaymentError(Exception):
@@ -29,6 +33,7 @@ class MoneroGateway:
     def __init__(self):
         self._rate_cache = None
         self._rate_cache_time = 0
+        logger.info("MoneroGateway initialized (network=%s)", MONERO_NETWORK)
 
     def _rpc_call(self, method, params=None):
         """Make a JSON-RPC call to monero-wallet-rpc."""

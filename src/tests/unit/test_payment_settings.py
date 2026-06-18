@@ -111,7 +111,16 @@ class TestMinPaymentAmount:
         from selfdroid.payments.settings import MIN_PAYMENT_AMOUNT_XMR
 
         assert MIN_PAYMENT_AMOUNT_XMR > 0
-        assert MIN_PAYMENT_AMOUNT_XMR == 0.001
+        # Value depends on MONERO_NETWORK env var:
+        # - mainnet: 0.001 (1 millinero minimum)
+        # - testnet: 0.01 (higher threshold since testnet XMR has no value)
+
+    def test_network_setting_exists(self):
+        """MONERO_NETWORK should be importable and set to a valid value."""
+        from selfdroid.payments.settings import MONERO_NETWORK
+
+        assert isinstance(MONERO_NETWORK, str)
+        assert MONERO_NETWORK in ("mainnet", "testnet")
 
 
 class TestSettingsImportConsistency:

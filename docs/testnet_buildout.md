@@ -220,6 +220,7 @@ def _log_network_info(self):
 Call this in `__init__` or on first RPC call for visibility.
 
 **B. Adjust payment checker poll interval based on network**
+--DO NOT DO--
 
 Testnet has faster block times, so the 30-second poll might be unnecessary overhead:
 ```python
@@ -228,6 +229,7 @@ POLL_INTERVAL = 60 if MONERO_NETWORK == "testnet" else 30  # Or vice versa based
 ```
 
 **C. Add testnet-specific minimum payment amount**
+REMOVE ALL MINIMUM PAYMENT AMOUNTS
 
 Testnet XMR has no value, so lower the minimum for testing convenience:
 ```python

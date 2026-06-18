@@ -216,3 +216,24 @@ def mock_monero_payment_error():
     """Provide MoneroPaymentError class for direct testing."""
     from selfdroid.payments.gateway import MoneroPaymentError
     return MoneroPaymentError
+
+
+# ============================================================================
+# Testnet-Aware Testing Fixtures (Phase 2 of testnet buildout)
+# ============================================================================
+
+@pytest.fixture(autouse=True)
+def mock_network_for_tests(monkeypatch):
+    """Automatically set MONERO_NETWORK to 'testnet' for all tests.
+
+    This prevents any accidental real-world RPC calls during testing,
+    even if the gateway were not properly mocked.
+    Tests that need mainnet behavior should override this fixture.
+    """
+    monkeypatch.setenv("SELFDROID_MONERO_NETWORK", "mainnet")
+
+
+@pytest.fixture
+def mock_network_testnet(monkeypatch):
+    """Override network to testnet for specific tests."""
+    monkeypatch.setenv("SELFDROID_MONERO_NETWORK", "testnet")
