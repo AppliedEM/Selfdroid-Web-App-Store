@@ -100,8 +100,10 @@ class MoneroGateway:
         if min_confirmations is None:
             min_confirmations = DEFAULT_CONFIRMATIONS
 
+        # Try get_transfers first (detects external payments)
         result = self._rpc_call("get_transfers", {
             "account_index": MONERO_ACCOUNT_INDEX,
+            "in": True,
             "filter_by_dest": True,
         })
 
@@ -113,10 +115,37 @@ class MoneroGateway:
             if dest_addr == address:
                 amount = Decimal(str(tx["amount"])) / Decimal("1000000000000")
                 received += amount
-                if not tx.get("pool", True):
+                if tx.get("confirmations", 0) >= min_confirmations:
                     confirmed_count += 1
 
-        confirmed = received >= expected_amount_xmr and confirmed_count >= min_confirmations
+        # Fallback: incoming_transfers (catches same-wallet sweeps,
+        # internal transfers that get_transfers misses)
+        if received == 0:
+            incoming = self._rpc_call("incoming_transfers", {
+                "transfer_type": "available",
+                "account_index": MONERO_ACCOUNT_INDEX,
+            })
+            for tx in incoming.get("transfers", []):
+                amt = Decimal(str(tx["amount"])) / Decimal("1000000000000")
+                if amt <= 0:
+                    continue
+                # Match by checking if this subaddress's full address matches
+                subaddr_index = tx.get("subaddr_index", {})
+                minor = subaddr_index.get("minor") if isinstance(subaddr_index, dict) else None
+                if minor is not None:
+                    # Resolve subaddress to full address for comparison
+                    addr_result = self._rpc_call("get_address", {
+                        "account_index": MONERO_ACCOUNT_INDEX,
+                        "address_index": [minor],
+                    })
+                    addrs = addr_result.get("addresses", [])
+                    if addrs and addrs[0]["address"] == address:
+                        received += amt
+                        # incoming_transfers doesn't have a confirmations field;
+                        # if it's "available" (unlocked), treat as confirmed
+                        confirmed_count += 1
+
+        confirmed = received >= expected_amount_xmr and confirmed_count > 0
 
         if received >= expected_amount_xmr:
             status = "confirming"

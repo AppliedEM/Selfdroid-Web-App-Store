@@ -31,12 +31,12 @@ services:
     network_mode: host
     restart: unless-stopped
     command:
-      - --daemon-address=${MONERO_DAEMON_ADDRESS:-http://127.0.0.1:18081}
-      - ${MONERO_NETWORK_FLAG:--testnet}
+      - --daemon-address=${MONERO_DAEMON_ADDRESS:-http://127.0.0.1:28081}
+      - ${MONERO_NETWORK_FLAG:---testnet}
       - --trusted-daemon
       - --rpc-bind-port=18088
       - --disable-rpc-login
-      - --wallet-file=/wallet/${MONERO_WALLET_FILE:-wallet_viewonly}
+      - --wallet-file=/wallet/${MONERO_WALLET_FILE:-wallet_testnet}
       - --password=${MONERO_WALLET_PASSWORD:-apples123}
       - --no-initial-sync
     environment:
@@ -62,8 +62,10 @@ services:
     volumes:
       - app_data:/app/app_data
       - ./wallet_data:/app/wallet_data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
-      - MONERO_WALLET_RPC_URL=http://localhost:18088/json_rpc
+      - MONERO_WALLET_RPC_URL=http://host.docker.internal:18088/json_rpc
       - MONERO_NETWORK=${MONERO_NETWORK:-mainnet}
     depends_on:
       - wallet-rpc

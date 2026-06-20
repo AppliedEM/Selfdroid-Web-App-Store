@@ -30,6 +30,8 @@ from selfdroid import db
 
 class AdminPendingSubmissionsEndpoint(WebAdminEndpointBase):
     def handle_request(self) -> None:
-        stmt = select(AppMetadataDBModel).filter_by(is_approved=False).order_by(AppMetadataDBModel.added_datetime.desc())
+        stmt = select(AppMetadataDBModel).filter_by(is_approved=False).filter(
+            AppMetadataDBModel.rejection_reason.is_(None)
+        ).order_by(AppMetadataDBModel.added_datetime.desc())
         pending_apps = db.session.execute(stmt).scalars().all()
         self.render_template_and_finish_request("admin_pending_submissions.html", pending_apps=pending_apps)

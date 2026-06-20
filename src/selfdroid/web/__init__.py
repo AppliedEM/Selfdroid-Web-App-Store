@@ -95,7 +95,7 @@ def fl_web_update_app(**url_params):
     return EndpointExecutor(WebUpdateAppEndpoint, url_params).execute()
 
 
-@web_blueprint.route("/delete-app/<int:app_id>", methods=["POST"])
+@web_blueprint.route("/delete-app/<int:app_id>", methods=["GET", "POST"])
 def fl_web_delete_app(**url_params):
     return EndpointExecutor(WebDeleteAppEndpoint, url_params).execute()
 
@@ -129,7 +129,7 @@ def fl_web_admin_pending(**url_params):
     return EndpointExecutor(AdminPendingSubmissionsEndpoint, url_params).execute()
 
 
-@web_blueprint.route("/admin/approve/<int:app_id>", methods=["POST"])
+@web_blueprint.route("/admin/approve/<int:app_id>", methods=["GET", "POST"])
 def fl_web_admin_approve(**url_params):
     return EndpointExecutor(AdminApproveAppEndpoint, url_params).execute()
 

@@ -64,14 +64,16 @@ class AppDeleter:
     def _perform_app_deletion(self) -> None:
         # An UserReadableException mustn't be raised in this method!
 
-        # 1. Database
+        # 1. Delete APK and icon files first — if these fail, the DB
+        #    row stays intact (no partial state).
+        apk_path = self._app_metadata.get_apk_path()
+        if os.path.exists(apk_path):
+            os.remove(apk_path)
+
+        icon_path = self._app_metadata.get_icon_path()
+        if os.path.exists(icon_path):
+            os.remove(icon_path)
+
+        # 2. Database — only after files are confirmed deleted
         db.session.delete(self._db_model)
         db.session.commit()
-
-        # 2. APK
-        apk_path = self._app_metadata.get_apk_path()
-        os.remove(apk_path)
-
-        # 3. Icon
-        icon_path = self._app_metadata.get_icon_path()
-        os.remove(icon_path)

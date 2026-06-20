@@ -47,10 +47,10 @@ Copyright (c) 2021 Vít Labuda. All rights reserved.
                                     <td>
                                         {% if app.price_usd is none and app.price_xmr is none %}
                                             Free
-                                        {% elif app.currency == "xmr" %}
+                                        {% elif app.price_xmr %}
                                             {{ "%.6f"|format(app.price_xmr) }} XMR
                                         {% else %}
-                                            ${{ "%.2f"|format(app.price_usd) }}
+                                            —
                                         {% endif %}
                                     </td>
                                     <td>{{ app.owner_username or 'N/A' }}</td>

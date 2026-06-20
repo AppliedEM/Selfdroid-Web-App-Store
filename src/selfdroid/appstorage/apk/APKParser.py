@@ -24,6 +24,7 @@ from typing import Optional
 import os.path
 import io
 import re
+import zipfile
 import PIL.Image
 import pyaxmlparser
 from selfdroid.Constants import Constants
@@ -40,8 +41,10 @@ class APKParser:
         try:
             self._apk: pyaxmlparser.APK = pyaxmlparser.APK(apk_path)
             is_valid_apk = self._apk.is_valid_APK()
-        except Exception:
-            raise APKParserException("Failed to parse the supplied APK file!")
+        except zipfile.BadZipFile:
+            raise APKParserException("The uploaded file is not a valid APK (not a ZIP archive).")
+        except Exception as e:
+            raise APKParserException(f"Failed to parse the supplied APK file: {e}")
 
         if not is_valid_apk:
             raise APKParserException("The supplied APK file is not valid!")

@@ -48,6 +48,32 @@ class PaymentCreateInvoiceEndpoint(WebAtLeastUserEndpointBase, EndpointWithAppID
             self.redirect_and_finish_request("web_blueprint.fl_web_login")
             return
 
+        # If the user already has a confirmed sale for this app, skip
+        # invoicing and go straight to download.
+        confirmed_sale = AppSaleManager.get_by_app_and_user(app_id, user_id)
+        if confirmed_sale:
+            self.redirect_and_finish_request("web_blueprint.fl_web_payment_download", app_id=confirmed_sale.id)
+            return
+
+        # If a pending sale already exists for this app+user, re-show it
+        # instead of creating a new one (and a new subaddress).
+        existing_sale = AppSaleManager.get_pending_by_app_and_user(app_id, user_id)
+        if existing_sale and existing_sale.invoice_id:
+            gateway = MoneroGateway()
+            self.render_template_and_finish_request(
+                "payment_page.html",
+                sale=existing_sale,
+                subaddress=existing_sale.invoice_id,
+                amount_xmr=float(existing_sale.amount_xmr),
+                amount_usd=float(existing_sale.amount_usd),
+                app=app,
+                payment_uri=gateway.generate_payment_uri(
+                    existing_sale.invoice_id,
+                    existing_sale.amount_xmr,
+                    label=f"App purchase: {app.app_name}",
+                ),
+            )
+
         amount_usd = float(app.price_usd) if app.price_usd else 0
         amount_xmr = float(app.price_xmr) if app.price_xmr else 0
 
@@ -70,6 +96,8 @@ class PaymentCreateInvoiceEndpoint(WebAtLeastUserEndpointBase, EndpointWithAppID
         )
 
         subaddress, _ = gateway.create_invoice_address(label=f"App purchase: {app.app_name} (sale #{sale.id})")
+        sale.invoice_id = subaddress
+        db.session.commit()
 
         self.render_template_and_finish_request(
             "payment_page.html",

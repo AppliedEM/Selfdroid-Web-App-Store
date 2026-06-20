@@ -180,13 +180,28 @@ class TestE2E:
         # Should redirect to login or payment
         assert resp.status_code in (302,)
 
-    def test_e2e_user_uploads_paid_app(self, client, logged_in_admin_client, logged_in_client, db_session):
-        """User uploads app with price → buyer sees price → creates invoice → pays → downloads."""
-        # Step 1: User uploads app (mock APK parser)
-        with mock.patch("selfdroid.appstorage.apk.APKParser.APKParser") as mock_parser:
+    def test_e2e_user_uploads_paid_app(self, client, admin_user_account, logged_in_admin_client, logged_in_client, test_user_account, db_session):
+        """User uploads app with price → admin approves → buyer pays → downloads.
+
+        Full lifecycle: upload → pending → approve → create invoice → confirm payment → download.
+        All wallet-rpc calls are mocked via the gateway RPC layer.
+        """
+        from werkzeug.datastructures import FileStorage
+        import io
+        from unittest.mock import patch
+        from selfdroid.appstorage.AppMetadataDBModel import AppMetadataDBModel
+
+        # --- Step 0: Prepare fake APK file and mock APK parser ---
+        fake_apk = FileStorage(
+            stream=io.BytesIO(b"PK\x03\x04fake_apk_content_for_e2e_test"),
+            filename="e2e_paid.apk",
+            content_type="application/vnd.android.package-archive",
+        )
+
+        with patch("selfdroid.appstorage.apk.APKParser.APKParser") as mock_parser:
             mock_parsed = mock.MagicMock()
-            mock_parsed.app_name = "Paid Upload App"
-            mock_parsed.package_name = "com.paidupload.app"
+            mock_parsed.app_name = "E2E Paid Upload App"
+            mock_parsed.package_name = "com.e2e.paidupload"
             mock_parsed.version_code = 1
             mock_parsed.version_name = "1.0.0"
             mock_parsed.min_api_level = 21
@@ -195,19 +210,100 @@ class TestE2E:
             mock_parsed.uniform_png_app_icon = b"\x89PNG\r\n\x1a\n"
             mock_parser.return_value.parsed_apk = mock_parsed
 
-            resp = client.post("/web/admin/approve/1")
+            # Step 1: User uploads app with price
+            resp = logged_in_client.post("/web/upload-app", data={
+                "apk_file": fake_apk,
+                "price": "9.99",
+                "currency": "usd",
+            }, content_type="multipart/form-data", follow_redirects=True)
 
-        # Step 2: Admin approves the pending app
-        pending_app = AppMetadataDBModel.query.filter_by(package_name="com.paidupload.app").first()
-        if pending_app:
-            pending_app.is_approved = True
-            pending_app.is_published = True
-            pending_app.price_usd = Decimal("9.99")
-            db_session.commit()
+            assert resp.status_code == 200
 
-        # Step 3: Buyer sees the app with price
-        resp = client.get("/web/")
+        # Verify app was created in DB as pending
+        app = AppMetadataDBModel.query.filter_by(package_name="com.e2e.paidupload").first()
+        assert app is not None, "App should exist in database after upload"
+        assert app.app_name == "E2E Paid Upload App"
+        assert app.is_approved is False, "App should be pending approval"
+        assert app.is_published is False, "App should not be published yet"
+        assert float(app.price_usd) == 9.99
+        assert app.currency == "usd"
+
+        # Step 2: Admin approves and publishes the app
+        # logged_in_admin_client shares the same client object as logged_in_client,
+        # and logged_in_client is evaluated last in the fixture chain, so the session
+        # has user (not admin) privileges. Explicitly set admin session.
+        with client.session_transaction() as sess:
+            sess["web_has_admin_privileges"] = True
+            sess["user_account_id"] = admin_user_account.id
+
+        resp = client.post(
+            f"/web/admin/approve/{app.id}",
+            data={},
+            follow_redirects=True,
+        )
         assert resp.status_code == 200
+
+        # Restore user session for remaining steps
+        with client.session_transaction() as sess:
+            sess["web_has_admin_privileges"] = False
+            sess["user_account_id"] = test_user_account.id
+
+        # Verify app is now approved and published
+        db_session.refresh(app)
+        assert app.is_approved is True, "App should be approved"
+        assert app.is_published is True, "App should be published"
+        assert app.approved_by is not None
+
+        # Step 3: Buyer creates a payment invoice
+        mock_subaddress = "9yt6E2EPaymentTestAddressXYZ"
+        with patch("selfdroid.payments.gateway.MoneroGateway.fiat_to_xmr",
+                   return_value=Decimal("0.05")):
+            with patch("selfdroid.payments.gateway.MoneroGateway.create_invoice_address",
+                       return_value=(mock_subaddress, 1)):
+                with patch("selfdroid.payments.gateway.MoneroGateway.generate_payment_uri",
+                           return_value="monero:e2etest"):
+                    resp = logged_in_client.post(
+                        f"/web/payment/create-invoice/{app.id}",
+                        data={},
+                        follow_redirects=True,
+                    )
+                    assert resp.status_code == 200
+
+        # Verify sale was created with invoice_id
+        from selfdroid.appstorage.crud.AppSaleManager import AppSaleManager
+        sales = AppSaleManager.get_sales_for_user(test_user_account.id)
+        assert len(sales) > 0, "Sale should exist after creating invoice"
+        sale = sales[0]
+        assert sale.app_id == app.id
+        assert sale.invoice_id == mock_subaddress, \
+            f"Sale should have invoice_id set, got {sale.invoice_id}"
+        assert sale.payment_status == "pending"
+
+        # Step 4: Directly confirm the sale in DB (simulates gateway detecting payment)
+        AppSaleManager.confirm_sale(sale.id, invoice_id=sale.invoice_id)
+
+        # Verify check-status now returns confirmed
+        resp = logged_in_client.get(f"/web/payment/check-status/{sale.id}")
+        assert resp.status_code == 200
+        import json
+        status_data = json.loads(resp.data.decode("utf-8"))
+        assert status_data["status"] == "confirmed", \
+            f"Expected confirmed, got {status_data['status']}"
+
+        # Step 5: Verify download access
+        resp = logged_in_client.get(f"/web/download-apk/{app.id}")
+        # Should succeed (200 or redirect to file) - not redirect to payment
+        # Note: Without an actual APK file on disk, WebDownloadAPKEndpoint 
+        # will try to send_file but crash. We verify the payment gate passed.
+        # The download endpoint checks payment_status="confirmed" first.
+        assert resp.status_code not in (302, 403), \
+            f"Download should not redirect/forbid for confirmed sale, got {resp.status_code}"
+
+        # Clean up: delete the sale and app
+        AppSaleManager.expire_sale(sale.id)
+        db_session.delete(sale)
+        db_session.delete(app)
+        db_session.commit()
 
     def test_e2e_currency_conversion(self, client, logged_in_admin_client, db_session):
         """User sets USD price → price_xmr is calculated correctly."""

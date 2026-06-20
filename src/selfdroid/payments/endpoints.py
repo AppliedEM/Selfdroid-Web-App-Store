@@ -41,7 +41,7 @@ def fl_web_payment_checkout():
     POST: Create invoice, show payment details with QR code
     """
     auth = WebAuthenticator()
-    if not auth.has_admin_privileges():
+    if not auth.has_at_least_user_privileges():
         return redirect(url_for("web_blueprint.fl_web_login"))
 
     if request.method == "GET":

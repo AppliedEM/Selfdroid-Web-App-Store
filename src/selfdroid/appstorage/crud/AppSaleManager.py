@@ -31,7 +31,16 @@ class AppSaleManager:
             app_id=app_id,
             buyer_user_id=buyer_user_id,
             payment_status="confirmed",
-        )
+        ).order_by(AppSaleDBModel.created_at.desc())
+        return db.session.execute(stmt).scalar()
+
+    @staticmethod
+    def get_pending_by_app_and_user(app_id: int, buyer_user_id: int) -> Optional[AppSaleDBModel]:
+        stmt = select(AppSaleDBModel).filter_by(
+            app_id=app_id,
+            buyer_user_id=buyer_user_id,
+            payment_status="pending",
+        ).order_by(AppSaleDBModel.created_at.desc())
         return db.session.execute(stmt).scalar()
 
     @staticmethod

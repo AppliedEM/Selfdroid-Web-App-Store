@@ -163,12 +163,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                             <td colspan="3">
                                 {% if app_metadata.is_free %}
                                     <span class="badge bg-success">Free</span>
-                                {% elif app_metadata.currency == "xmr" %}
-                                    <span class="badge bg-primary">{{ "%.6f"|format(app_metadata.price_xmr or 0) }} XMR</span>
-                                    <small class="text-muted"> (approx. ${{ "%.2f"|format(app_metadata.price_usd or 0) }} USD)</small>
+                                {% elif app_metadata.price_xmr %}
+                                    <span class="badge bg-primary">{{ "%.6f"|format(app_metadata.price_xmr) }} XMR</span>
                                 {% else %}
-                                    <span class="badge bg-primary">${{ "%.2f"|format(app_metadata.price_usd or 0) }}</span>
-                                    <small class="text-muted"> (approx. {{ "%.6f"|format(app_metadata.price_xmr or 0) }} XMR)</small>
+                                    <span class="badge bg-secondary">—</span>
                                 {% endif %}
                             </td>
                         </tr>

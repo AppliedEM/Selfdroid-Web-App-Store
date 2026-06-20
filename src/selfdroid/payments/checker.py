@@ -2,7 +2,7 @@
 Background payment checker.
 
 Runs as a Flask application thread. Polls monero-wallet-rpc
-for payment confirmations on all pending invoices.
+for payment confirmations on all pending invoices and app sales.
 """
 
 import threading
@@ -13,6 +13,7 @@ from sqlalchemy import select, or_
 from selfdroid import app
 from selfdroid.payments.invoice import PaymentInvoice
 from selfdroid.payments.gateway import gateway
+from selfdroid.appstorage.crud.AppSaleManager import AppSaleManager
 from selfdroid import db
 
 logger = logging.getLogger(__name__)
@@ -52,6 +53,7 @@ class PaymentChecker:
             try:
                 with app.app_context():
                     self._check_pending_invoices()
+                    self._check_pending_sales()
             except Exception as e:
                 logger.error(f"Error in payment checker: {e}")
             time.sleep(POLL_INTERVAL)
@@ -99,6 +101,39 @@ class PaymentChecker:
 
             except Exception as e:
                 app.logger.error(f"Error checking invoice {invoice.order_id}: {e}")
+                db.session.rollback()
+
+    def _check_pending_sales(self):
+        """Check all pending app sales for payment confirmation.
+
+        Queries AppSaleDBModel records where payment_status is "pending"
+        and an invoice_id (Monero subaddress) has been assigned. For each,
+        calls gateway.check_payment() and transitions to "confirmed" when
+        the expected amount has been received with sufficient confirmations.
+        """
+        pending_sales = AppSaleManager.get_pending_sales()
+
+        for sale in pending_sales:
+            try:
+                if not sale.invoice_id:
+                    continue
+
+                expected = sale.amount_xmr
+                result = gateway.check_payment(
+                    sale.invoice_id,
+                    expected,
+                    2,  # Default min confirmations
+                )
+
+                if result["confirmed"]:
+                    AppSaleManager.confirm_sale(sale.id, invoice_id=sale.invoice_id)
+                    app.logger.info(
+                        f"Sale {sale.id} confirmed: "
+                        f"{result['received']} XMR for app_id={sale.app_id}"
+                    )
+
+            except Exception as e:
+                app.logger.debug(f"Error checking sale {sale.id}: {e}")
                 db.session.rollback()
 
 

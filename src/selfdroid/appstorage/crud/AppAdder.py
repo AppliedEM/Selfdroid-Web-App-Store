@@ -21,6 +21,7 @@
 
 
 import os
+import shutil
 import sqlalchemy.exc
 from sqlalchemy import select
 from selfdroid.appstorage.AppMetadata import AppMetadata
@@ -88,7 +89,7 @@ class AppAdder:
         # 2. APK
         apk_path = app_metadata.get_apk_path()
 
-        os.rename(self._uploaded_apk_path, apk_path)
+        shutil.move(self._uploaded_apk_path, apk_path)
 
         # 3. Icon
         icon_path = app_metadata.get_icon_path()

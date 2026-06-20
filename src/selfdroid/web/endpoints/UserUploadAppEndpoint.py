@@ -22,6 +22,8 @@
 
 from typing import Dict, Any
 import os
+import io
+import shutil
 import tempfile
 import flask
 from decimal import Decimal
@@ -56,9 +58,26 @@ class UserUploadAppEndpoint(WebAtLeastUserEndpointBase):
             self.message_collector.add_error_message("No APK file selected!")
             return
 
+        # Reject obviously non-APK files (too small to be a valid zip+APK)
+        try:
+            apk_file.stream.seek(0, os.SEEK_END)
+            file_size = apk_file.stream.tell()
+            apk_file.stream.seek(0)
+        except (AttributeError, io.UnsupportedOperation):
+            file_size = apk_file.content_length or 0
+        if file_size < 512:
+            self.message_collector.add_error_message(
+                f"The selected file is too small ({file_size} bytes) to be an APK. "
+                "Please select a valid APK file."
+            )
+            return
+
+        # Write uploaded APK to a temp file. Close the NamedTemporaryFile
+        # before calling save() — keeping the fd open while save() re-opens
+        # the same path causes filesystem-level issues on some platforms.
         with tempfile.NamedTemporaryFile(suffix=".apk", delete=False) as temp_file:
-            apk_file.save(temp_file.name)
             temp_apk_path = temp_file.name
+        apk_file.save(temp_apk_path)
 
         try:
             with AppStorageHelpers.get_app_storage_lock():
@@ -75,15 +94,12 @@ class UserUploadAppEndpoint(WebAtLeastUserEndpointBase):
                 price_xmr = None
                 currency = upload_form.currency.data or "usd"
 
-                if currency == "xmr" and price_usd is not None:
+                if price_usd is not None:
                     from selfdroid.payments.gateway import gateway
                     try:
                         price_xmr = float(gateway.fiat_to_xmr(Decimal(str(price_usd))))
                     except Exception:
                         price_xmr = None
-
-                if currency == "usd" and price_usd is not None:
-                    price_xmr = None
 
                 db_model = AppMetadataDBModel(
                     app_name=parsed_apk.app_name,
@@ -102,18 +118,20 @@ class UserUploadAppEndpoint(WebAtLeastUserEndpointBase):
                     is_approved=False,
                 )
                 db.session.add(db_model)
-                db.session.commit()
+                db.session.flush()  # Assign app_id without committing
 
                 app_id = db_model.id
 
-                # Save APK
+                # Save APK and icon BEFORE committing — if these fail,
+                # the rollback undoes the DB row too.
                 apk_path = AppStorageHelpers.get_apk_path_by_app_id(app_id)
-                os.rename(temp_apk_path, apk_path)
+                shutil.move(temp_apk_path, apk_path)
 
-                # Save icon
                 icon_path = AppStorageHelpers.get_icon_path_by_app_id(app_id)
                 with open(icon_path, "wb") as icon_file:
                     icon_file.write(parsed_apk.uniform_png_app_icon)
+
+                db.session.commit()
 
         except AppAdderException as e:
             db.session.rollback()
@@ -121,6 +139,8 @@ class UserUploadAppEndpoint(WebAtLeastUserEndpointBase):
             return
         except Exception as e:
             db.session.rollback()
+            import logging
+            logging.getLogger(__name__).error("Upload failed: %s", e, exc_info=True)
             self.message_collector.add_error_message("An error occurred while uploading the app!")
             return
 

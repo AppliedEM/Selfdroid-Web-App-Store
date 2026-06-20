@@ -22,6 +22,7 @@
 
 from typing import Tuple
 import os
+import shutil
 import sqlalchemy.exc
 from selfdroid.UserReadableException import UserReadableException
 from selfdroid.appstorage.AppMetadata import AppMetadata
@@ -112,7 +113,7 @@ class AppUpdater:
         apk_path = updated_app_metadata.get_apk_path()
 
         os.remove(apk_path)
-        os.rename(self._uploaded_apk_path, apk_path)
+        shutil.move(self._uploaded_apk_path, apk_path)
 
         # 3. Icon
         icon_path = updated_app_metadata.get_icon_path()
